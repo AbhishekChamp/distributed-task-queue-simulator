@@ -49,7 +49,7 @@ export class TaskQueue {
   }
 
   setRetryDelay(taskId: string, delay: number): void {
-    this.retryDelays.set(taskId, Date.now() + delay)
+    this.retryDelays.set(taskId, delay)
   }
 
   getRetryDelay(taskId: string): number | undefined {
