@@ -62,6 +62,7 @@ export type SimulationEventType =
   | 'WORKER_STARTED'
   | 'WORKER_IDLE'
   | 'SYSTEM_OVERLOAD'
+  | 'ALL_TASKS_COMPLETED'
 
 export interface SimulationEvent {
   type: SimulationEventType

@@ -49,6 +49,19 @@ export class Scheduler {
     this.processRetryQueue()
     this.assignTasks()
     this.updateMetrics()
+    this.checkIdleState()
+  }
+
+  private checkIdleState(): void {
+    const hasWork =
+      this.mainQueue.size > 0 || this.retryQueue.size > 0 || this.workers.some((w) => w.busy)
+    if (!hasWork && this.tasks.size > 0) {
+      this.stop()
+      this.emit({
+        type: 'ALL_TASKS_COMPLETED',
+        timestamp: Date.now(),
+      })
+    }
   }
 
   private processRetryQueue(): void {

@@ -44,6 +44,9 @@ export class SimulationEngine {
       if (this.eventHistory.length > this.maxHistory) {
         this.eventHistory.shift()
       }
+      if (event.type === 'ALL_TASKS_COMPLETED') {
+        this.isRunning = false
+      }
     })
 
     this.updateWorkers()
