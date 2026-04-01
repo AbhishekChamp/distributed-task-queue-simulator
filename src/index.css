@@ -1,21 +1,9 @@
 @import 'tailwindcss';
 
-:root {
-  --text: #e2e8f0;
-  --text-h: #f8fafc;
-  --bg: #0f172a;
-  --bg-panel: #1e293b;
-  --border: #334155;
-  --accent: #38bdf8;
-  --accent-bg: rgba(56, 189, 248, 0.15);
-  --success: #22c55e;
-  --warning: #f59e0b;
-  --danger: #ef4444;
-  --muted: #94a3b8;
+@custom-variant dark (&:where(.dark, .dark *));
 
+:root {
   font-family: system-ui, 'Segoe UI', Roboto, sans-serif;
-  color: var(--text);
-  background: var(--bg);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -25,6 +13,13 @@
 body {
   margin: 0;
   min-height: 100svh;
+  color: #1e293b;
+  background: #ffffff;
+}
+
+.dark body {
+  color: #e2e8f0;
+  background: #020617;
 }
 
 #root {
@@ -43,14 +38,22 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--bg);
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--border);
+  background: #cbd5e1;
   border-radius: 4px;
 }
 
+.dark ::-webkit-scrollbar-thumb {
+  background: #334155;
+}
+
 ::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
   background: #475569;
 }

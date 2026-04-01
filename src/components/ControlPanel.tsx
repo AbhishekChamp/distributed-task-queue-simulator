@@ -8,7 +8,9 @@ interface ControlPanelProps {
 export function ControlPanel({ config, onChange }: ControlPanelProps) {
   return (
     <div className="p-4 space-y-6">
-      <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500">Controls</h2>
+      <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-500">
+        Controls
+      </h2>
 
       <div className="space-y-4">
         <ControlRow label="Workers" value={`${config.workerCount}`}>
@@ -40,7 +42,7 @@ export function ControlPanel({ config, onChange }: ControlPanelProps) {
             max={10}
             value={config.maxRetries}
             onChange={(e) => onChange({ maxRetries: Number(e.target.value) })}
-            className="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1 text-sm"
+            className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded px-2 py-1 text-sm text-slate-800 dark:text-slate-200"
           />
         </ControlRow>
 
@@ -72,8 +74,8 @@ function ControlRow({
   return (
     <div className="space-y-1">
       <div className="flex items-center justify-between text-sm">
-        <span className="text-slate-400">{label}</span>
-        <span className="font-mono text-slate-200">{value}</span>
+        <span className="text-slate-600 dark:text-slate-400">{label}</span>
+        <span className="font-mono text-slate-800 dark:text-slate-200">{value}</span>
       </div>
       {children}
     </div>

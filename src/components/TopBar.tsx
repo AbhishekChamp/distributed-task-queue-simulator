@@ -1,4 +1,5 @@
 import { Play, Pause, RotateCcw, Plus } from './icons'
+import { ThemeToggle } from './ThemeToggle'
 
 interface TopBarProps {
   isRunning: boolean
@@ -10,10 +11,10 @@ interface TopBarProps {
 
 export function TopBar({ isRunning, onStart, onPause, onReset, onAddTasks }: TopBarProps) {
   return (
-    <header className="h-14 border-b border-slate-800 bg-slate-900 flex items-center justify-between px-4 shrink-0">
+    <header className="h-14 border-b border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-900 flex items-center justify-between px-4 shrink-0">
       <div className="flex items-center gap-2">
         <div className="w-3 h-3 rounded-full bg-sky-500 animate-pulse" />
-        <h1 className="text-sm font-semibold tracking-wide text-slate-100">
+        <h1 className="text-sm font-semibold tracking-wide text-slate-900 dark:text-slate-100">
           Distributed Task Queue Simulator
         </h1>
       </div>
@@ -22,7 +23,7 @@ export function TopBar({ isRunning, onStart, onPause, onReset, onAddTasks }: Top
         {isRunning ? (
           <button
             onClick={onPause}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-amber-600/20 text-amber-400 hover:bg-amber-600/30 transition"
+            className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-amber-100 dark:bg-amber-600/20 text-amber-700 dark:text-amber-400 hover:bg-amber-200 dark:hover:bg-amber-600/30 transition"
           >
             <Pause className="w-4 h-4" />
             <span className="text-sm">Pause</span>
@@ -30,7 +31,7 @@ export function TopBar({ isRunning, onStart, onPause, onReset, onAddTasks }: Top
         ) : (
           <button
             onClick={onStart}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-emerald-600/20 text-emerald-400 hover:bg-emerald-600/30 transition"
+            className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-emerald-100 dark:bg-emerald-600/20 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-200 dark:hover:bg-emerald-600/30 transition"
           >
             <Play className="w-4 h-4" />
             <span className="text-sm">Start</span>
@@ -39,24 +40,28 @@ export function TopBar({ isRunning, onStart, onPause, onReset, onAddTasks }: Top
 
         <button
           onClick={onReset}
-          className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-slate-800 text-slate-300 hover:bg-slate-700 transition"
+          className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-700 transition"
         >
           <RotateCcw className="w-4 h-4" />
           <span className="text-sm">Reset</span>
         </button>
 
-        <div className="w-px h-6 bg-slate-700 mx-1" />
+        <div className="w-px h-6 bg-slate-300 dark:bg-slate-700 mx-1" />
 
         {[1, 10, 100, 1000].map((count) => (
           <button
             key={count}
             onClick={() => onAddTasks(count)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-sky-600/20 text-sky-400 hover:bg-sky-600/30 transition"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-sky-100 dark:bg-sky-600/20 text-sky-700 dark:text-sky-400 hover:bg-sky-200 dark:hover:bg-sky-600/30 transition"
           >
             <Plus className="w-4 h-4" />
             <span className="text-sm">{count}</span>
           </button>
         ))}
+
+        <div className="w-px h-6 bg-slate-300 dark:bg-slate-700 mx-1" />
+
+        <ThemeToggle />
       </div>
     </header>
   )

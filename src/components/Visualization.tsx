@@ -23,7 +23,9 @@ export function Visualization({
 
   return (
     <div className="space-y-6">
-      <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500">Pipeline</h2>
+      <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-500">
+        Pipeline
+      </h2>
 
       <div className="flex items-center gap-4">
         <StageBox label="Producer" count={tasks.size} color="bg-violet-600" />
@@ -77,16 +79,16 @@ export function Visualization({
       </div>
 
       <div className="space-y-2">
-        <h3 className="text-xs font-semibold text-slate-500">Worker Pool</h3>
+        <h3 className="text-xs font-semibold text-slate-500 dark:text-slate-500">Worker Pool</h3>
         <div className="flex flex-wrap gap-2">
           {workers.map((worker) => (
             <motion.div
               key={worker.id}
               animate={{
                 scale: worker.busy ? 1.05 : 1,
-                backgroundColor: worker.busy ? '#f59e0b' : '#334155',
+                backgroundColor: worker.busy ? '#f59e0b' : '#cbd5e1',
               }}
-              className="w-10 h-10 rounded-md flex items-center justify-center text-xs font-bold text-slate-900"
+              className="w-10 h-10 rounded-md flex items-center justify-center text-xs font-bold text-slate-900 dark:text-slate-900"
               title={`${worker.id} | Processed: ${worker.processedCount}`}
             >
               {worker.id.split('-')[1]}
@@ -96,7 +98,7 @@ export function Visualization({
       </div>
 
       <div className="space-y-2">
-        <h3 className="text-xs font-semibold text-slate-500">Live Tasks</h3>
+        <h3 className="text-xs font-semibold text-slate-500 dark:text-slate-500">Live Tasks</h3>
         <div className="flex flex-wrap gap-1">
           <AnimatePresence>
             {Array.from(tasks.values())
@@ -138,13 +140,13 @@ function StageBox({
       >
         {count}
       </div>
-      <span className="text-xs text-slate-400">{label}</span>
+      <span className="text-xs text-slate-500 dark:text-slate-400">{label}</span>
     </div>
   )
 }
 
 function Arrow() {
-  return <div className="text-slate-600 text-xl">→</div>
+  return <div className="text-slate-400 dark:text-slate-600 text-xl">→</div>
 }
 
 function QueueCard({
@@ -159,16 +161,18 @@ function QueueCard({
   color: string
 }) {
   return (
-    <div className="rounded-lg border border-slate-800 bg-slate-900/50 p-3">
+    <div className="rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-100/80 dark:bg-slate-900/50 p-3">
       <div className="flex items-center justify-between mb-2">
-        <span className="text-sm text-slate-400">{title}</span>
-        <span className="font-mono text-slate-200">{count}</span>
+        <span className="text-sm text-slate-600 dark:text-slate-400">{title}</span>
+        <span className="font-mono text-slate-800 dark:text-slate-200">{count}</span>
       </div>
       <div className="flex flex-wrap gap-1">
         {Array.from({ length: items }).map((_, i) => (
           <div key={i} className={`w-3 h-3 rounded-sm ${color}`} />
         ))}
-        {count > items && <span className="text-xs text-slate-500 ml-1">+{count - items}</span>}
+        {count > items && (
+          <span className="text-xs text-slate-400 dark:text-slate-500 ml-1">+{count - items}</span>
+        )}
       </div>
     </div>
   )
