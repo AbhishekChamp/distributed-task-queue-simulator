@@ -40,6 +40,10 @@ export interface SimulationMetrics {
   failureRate: number
 }
 
+export interface MetricsHistoryPoint extends SimulationMetrics {
+  timestamp: number
+}
+
 export interface SimulationState {
   isRunning: boolean
   config: SimulationConfig
@@ -49,6 +53,7 @@ export interface SimulationState {
   retryQueue: string[]
   deadLetterQueue: string[]
   metrics: SimulationMetrics
+  metricsHistory: MetricsHistoryPoint[]
   events: SimulationEvent[]
 }
 
@@ -73,3 +78,9 @@ export interface SimulationEvent {
 }
 
 export type EventListener = (event: SimulationEvent) => void
+
+export interface SimulationPreset {
+  name: string
+  description: string
+  config: SimulationConfig
+}

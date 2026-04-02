@@ -4,13 +4,37 @@ import { setSimulationState, useSimulationStore } from '../store/useSimulationSt
 import type { SimulationConfig, SimulationEvent } from '../types'
 import toast from 'react-hot-toast'
 
+const CONFIG_KEY = 'dtq-config'
+
+function loadStoredConfig(): Partial<SimulationConfig> | undefined {
+  try {
+    const raw = localStorage.getItem(CONFIG_KEY)
+    if (raw) return JSON.parse(raw) as Partial<SimulationConfig>
+  } catch {
+    // ignore
+  }
+  return undefined
+}
+
+function saveConfig(config: SimulationConfig): void {
+  try {
+    localStorage.setItem(CONFIG_KEY, JSON.stringify(config))
+  } catch {
+    // ignore
+  }
+}
+
 export function useSimulation() {
   const engineRef = useRef<SimulationEngine | null>(null)
   const unsubscribeRef = useRef<(() => void) | null>(null)
   const rafRef = useRef<number | null>(null)
 
   useEffect(() => {
-    engineRef.current = new SimulationEngine()
+    const stored = loadStoredConfig()
+    engineRef.current = new SimulationEngine(stored)
+    if (stored) {
+      setSimulationState({ config: engineRef.current.getState().config })
+    }
 
     const handleEvent = (event: SimulationEvent) => {
       if (event.type === 'TASK_FAILED') {
@@ -72,7 +96,9 @@ export function useSimulation() {
   const updateConfig = useCallback((config: Partial<SimulationConfig>) => {
     engineRef.current?.updateConfig(config)
     if (engineRef.current) {
-      setSimulationState(engineRef.current.getState())
+      const state = engineRef.current.getState()
+      setSimulationState(state)
+      saveConfig(state.config)
     }
   }, [])
 

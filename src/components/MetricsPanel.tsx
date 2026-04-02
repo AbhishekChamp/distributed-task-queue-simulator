@@ -1,31 +1,41 @@
-import type { SimulationMetrics } from '../types'
+import type { SimulationMetrics, MetricsHistoryPoint } from '../types'
+import { Sparkline } from './Sparkline'
 
 interface MetricsPanelProps {
   metrics: SimulationMetrics
+  metricsHistory: MetricsHistoryPoint[]
 }
 
-export function MetricsPanel({ metrics }: MetricsPanelProps) {
-  const items = [
-    { label: 'Queue Depth', value: metrics.queued, color: 'text-sky-600 dark:text-sky-400' },
-    { label: 'Processing', value: metrics.processing, color: 'text-amber-600 dark:text-amber-400' },
+export function MetricsPanel({ metrics, metricsHistory }: MetricsPanelProps) {
+  const items: {
+    label: string
+    value: number | string
+    color: string
+    historyKey: keyof SimulationMetrics
+  }[] = [
+    { label: 'Queue Depth', value: metrics.queued, color: '#0ea5e9', historyKey: 'queued' },
+    { label: 'Processing', value: metrics.processing, color: '#f59e0b', historyKey: 'processing' },
     {
       label: 'Active Workers',
       value: metrics.activeWorkers,
-      color: 'text-emerald-600 dark:text-emerald-400',
+      color: '#10b981',
+      historyKey: 'activeWorkers',
     },
     {
       label: 'Tasks / sec',
       value: metrics.tasksPerSecond,
-      color: 'text-violet-600 dark:text-violet-400',
+      color: '#8b5cf6',
+      historyKey: 'tasksPerSecond',
     },
-    { label: 'Success', value: metrics.success, color: 'text-emerald-600 dark:text-emerald-400' },
-    { label: 'Failed', value: metrics.failed, color: 'text-rose-600 dark:text-rose-400' },
-    { label: 'Retrying', value: metrics.retry, color: 'text-amber-600 dark:text-amber-400' },
-    { label: 'DLQ', value: metrics.dead, color: 'text-slate-500 dark:text-slate-400' },
+    { label: 'Success', value: metrics.success, color: '#10b981', historyKey: 'success' },
+    { label: 'Failed', value: metrics.failed, color: '#f43f5e', historyKey: 'failed' },
+    { label: 'Retrying', value: metrics.retry, color: '#f59e0b', historyKey: 'retry' },
+    { label: 'DLQ', value: metrics.dead, color: '#64748b', historyKey: 'dead' },
     {
       label: 'Failure Rate',
       value: `${metrics.failureRate}%`,
-      color: 'text-rose-600 dark:text-rose-400',
+      color: '#f43f5e',
+      historyKey: 'failureRate',
     },
   ]
 
@@ -35,15 +45,28 @@ export function MetricsPanel({ metrics }: MetricsPanelProps) {
         Metrics
       </h2>
       <div className="grid grid-cols-1 gap-3">
-        {items.map((item) => (
-          <div
-            key={item.label}
-            className="flex items-center justify-between rounded-md border border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-950/50 px-3 py-2"
-          >
-            <span className="text-sm text-slate-600 dark:text-slate-400">{item.label}</span>
-            <span className={`font-mono text-lg font-semibold ${item.color}`}>{item.value}</span>
-          </div>
-        ))}
+        {items.map((item) => {
+          const history = metricsHistory.map((m) => m[item.historyKey] as number)
+          return (
+            <div
+              key={item.label}
+              className="flex items-center justify-between rounded-md border border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-950/50 px-3 py-2"
+            >
+              <div className="flex flex-col">
+                <span className="text-sm text-slate-600 dark:text-slate-400">{item.label}</span>
+                <span className="font-mono text-lg font-semibold text-slate-800 dark:text-slate-100">
+                  {item.value}
+                </span>
+              </div>
+              <Sparkline
+                data={history.length > 1 ? history : [0, 0]}
+                width={80}
+                height={28}
+                color={item.color}
+              />
+            </div>
+          )
+        })}
       </div>
     </div>
   )

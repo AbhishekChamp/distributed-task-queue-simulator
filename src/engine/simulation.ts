@@ -1,4 +1,4 @@
-import type { SimulationConfig, Task, SimulationEvent } from '../types'
+import type { SimulationConfig, Task, SimulationEvent, MetricsHistoryPoint } from '../types'
 import { EventBus } from './eventBus'
 import { TaskQueue } from './queue'
 import { createWorker } from './worker'
@@ -17,6 +17,9 @@ export class SimulationEngine {
   private isRunning = false
   private eventHistory: SimulationEvent[] = []
   private maxHistory = 200
+  private metricsHistory: MetricsHistoryPoint[] = []
+  private maxMetricsHistory = 300
+  private metricsIntervalId: number | null = null
 
   constructor(config?: Partial<SimulationConfig>) {
     this.config = {
@@ -50,6 +53,18 @@ export class SimulationEngine {
     })
 
     this.updateWorkers()
+    this.startMetricsSampling()
+  }
+
+  private startMetricsSampling(): void {
+    if (this.metricsIntervalId !== null) return
+    this.metricsIntervalId = window.setInterval(() => {
+      const metrics = this.computeMetrics()
+      this.metricsHistory.push({ ...metrics, timestamp: Date.now() })
+      if (this.metricsHistory.length > this.maxMetricsHistory) {
+        this.metricsHistory.shift()
+      }
+    }, 500)
   }
 
   start(): void {
@@ -70,6 +85,7 @@ export class SimulationEngine {
     this.retryQueue = new TaskQueue()
     this.deadLetterQueue = new TaskQueue()
     this.eventHistory = []
+    this.metricsHistory = []
     this.workers.forEach((w) => {
       w.busy = false
       w.currentTaskId = undefined
@@ -149,6 +165,7 @@ export class SimulationEngine {
       deadLetterQueue: this.deadLetterQueue.all,
       events: [...this.eventHistory],
       metrics: this.computeMetrics(),
+      metricsHistory: [...this.metricsHistory],
     }
   }
 

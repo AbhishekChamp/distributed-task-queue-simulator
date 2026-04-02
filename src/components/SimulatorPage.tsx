@@ -1,12 +1,22 @@
+import { useState } from 'react'
 import { useSimulation } from '../hooks/useSimulation'
+import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts'
 import { TopBar } from './TopBar'
 import { ControlPanel } from './ControlPanel'
 import { Visualization } from './Visualization'
 import { MetricsPanel } from './MetricsPanel'
 import { TaskTable } from './TaskTable'
+import { EventLog } from './EventLog'
 
 export function SimulatorPage() {
   const { state, start, pause, reset, addTasks, updateConfig } = useSimulation()
+  const [bottomTab, setBottomTab] = useState<'tasks' | 'events'>('tasks')
+
+  useKeyboardShortcuts({
+    onTogglePlay: () => (state.isRunning ? pause() : start()),
+    onReset: reset,
+    onAddTasks: addTasks,
+  })
 
   return (
     <div className="flex flex-col h-screen bg-white dark:bg-slate-950 text-slate-800 dark:text-slate-200 overflow-hidden">
@@ -19,7 +29,7 @@ export function SimulatorPage() {
       />
 
       <div className="flex flex-1 overflow-hidden">
-        <aside className="w-64 border-r border-slate-200 dark:border-slate-800 bg-slate-100/80 dark:bg-slate-900/50 overflow-y-auto">
+        <aside className="w-64 border-r border-slate-200 dark:border-slate-800 bg-slate-100/80 dark:bg-slate-900/50 overflow-hidden flex flex-col">
           <ControlPanel config={state.config} onChange={updateConfig} />
         </aside>
 
@@ -34,13 +44,41 @@ export function SimulatorPage() {
                 deadLetterQueue={state.deadLetterQueue}
               />
             </div>
-            <aside className="w-72 border-l border-slate-200 dark:border-slate-800 bg-slate-100/80 dark:bg-slate-900/50 overflow-y-auto">
-              <MetricsPanel metrics={state.metrics} />
+            <aside className="w-80 border-l border-slate-200 dark:border-slate-800 bg-slate-100/80 dark:bg-slate-900/50 overflow-y-auto">
+              <MetricsPanel metrics={state.metrics} metricsHistory={state.metricsHistory} />
             </aside>
           </div>
 
-          <div className="h-64 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/30 overflow-hidden">
-            <TaskTable tasks={state.tasks} />
+          <div className="h-64 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/30 overflow-hidden flex flex-col">
+            <div className="flex items-center gap-1 px-4 border-b border-slate-200 dark:border-slate-800">
+              <button
+                onClick={() => setBottomTab('tasks')}
+                className={`px-3 py-2 text-xs font-semibold uppercase tracking-wider transition ${
+                  bottomTab === 'tasks'
+                    ? 'text-sky-600 dark:text-sky-400 border-b-2 border-sky-600 dark:border-sky-400'
+                    : 'text-slate-500 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                }`}
+              >
+                Tasks
+              </button>
+              <button
+                onClick={() => setBottomTab('events')}
+                className={`px-3 py-2 text-xs font-semibold uppercase tracking-wider transition ${
+                  bottomTab === 'events'
+                    ? 'text-sky-600 dark:text-sky-400 border-b-2 border-sky-600 dark:border-sky-400'
+                    : 'text-slate-500 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                }`}
+              >
+                Event Log
+              </button>
+            </div>
+            <div className="flex-1 overflow-hidden">
+              {bottomTab === 'tasks' ? (
+                <TaskTable tasks={state.tasks} />
+              ) : (
+                <EventLog events={state.events} />
+              )}
+            </div>
           </div>
         </main>
       </div>

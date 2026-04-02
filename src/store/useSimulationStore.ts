@@ -1,5 +1,12 @@
 import { create } from 'zustand'
-import type { SimulationConfig, SimulationMetrics, Task, Worker, SimulationEvent } from '../types'
+import type {
+  SimulationConfig,
+  SimulationMetrics,
+  MetricsHistoryPoint,
+  Task,
+  Worker,
+  SimulationEvent,
+} from '../types'
 
 export interface SimulationStoreState {
   isRunning: boolean
@@ -11,6 +18,7 @@ export interface SimulationStoreState {
   deadLetterQueue: string[]
   events: SimulationEvent[]
   metrics: SimulationMetrics
+  metricsHistory: MetricsHistoryPoint[]
 }
 
 export const useSimulationStore = create<SimulationStoreState>(() => ({
@@ -39,6 +47,7 @@ export const useSimulationStore = create<SimulationStoreState>(() => ({
     tasksPerSecond: 0,
     failureRate: 0,
   },
+  metricsHistory: [],
 }))
 
 export function setSimulationState(state: Partial<SimulationStoreState>): void {
