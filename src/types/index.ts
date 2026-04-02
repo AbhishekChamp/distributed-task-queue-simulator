@@ -11,14 +11,24 @@ export interface Task {
   completedAt?: number
   duration: number
   error?: string
+  batchSize?: number
+  parentId?: string
 }
+
+export type WorkerProfile = 'fast' | 'normal' | 'slow' | 'unreliable'
 
 export interface Worker {
   id: string
   busy: boolean
   currentTaskId?: string
   processedCount: number
+  healthy: boolean
+  cooldownUntil: number
+  profile: WorkerProfile
+  consecutiveFailures: number
 }
+
+export type LoadBalancingStrategy = 'round-robin' | 'least-connections' | 'random'
 
 export interface SimulationConfig {
   workerCount: number
@@ -26,6 +36,9 @@ export interface SimulationConfig {
   maxRetries: number
   simulationSpeed: number
   baseProcessingTime: number
+  maxQueueCapacity: number
+  loadBalancingStrategy: LoadBalancingStrategy
+  enableCircuitBreaker: boolean
 }
 
 export interface SimulationMetrics {
@@ -38,6 +51,9 @@ export interface SimulationMetrics {
   activeWorkers: number
   tasksPerSecond: number
   failureRate: number
+  p50Latency: number
+  p95Latency: number
+  p99Latency: number
 }
 
 export interface MetricsHistoryPoint extends SimulationMetrics {
@@ -66,7 +82,11 @@ export type SimulationEventType =
   | 'TASK_MOVED_TO_DLQ'
   | 'WORKER_STARTED'
   | 'WORKER_IDLE'
+  | 'WORKER_HEALTHY'
+  | 'WORKER_UNHEALTHY'
   | 'SYSTEM_OVERLOAD'
+  | 'BACKPRESSURE_APPLIED'
+  | 'BATCH_SPAWNED'
   | 'ALL_TASKS_COMPLETED'
 
 export interface SimulationEvent {

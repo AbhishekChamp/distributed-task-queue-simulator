@@ -9,7 +9,19 @@ import { TaskTable } from './TaskTable'
 import { EventLog } from './EventLog'
 
 export function SimulatorPage() {
-  const { state, start, pause, reset, addTasks, updateConfig } = useSimulation()
+  const {
+    state,
+    start,
+    pause,
+    reset,
+    addTasks,
+    addBatch,
+    updateConfig,
+    snapshotsCount,
+    rewindTo,
+    exitRewind,
+    isRewind,
+  } = useSimulation()
   const [bottomTab, setBottomTab] = useState<'tasks' | 'events'>('tasks')
 
   useKeyboardShortcuts({
@@ -30,7 +42,15 @@ export function SimulatorPage() {
 
       <div className="flex flex-1 overflow-hidden">
         <aside className="w-64 border-r border-slate-200 dark:border-slate-800 bg-slate-100/80 dark:bg-slate-900/50 overflow-hidden flex flex-col">
-          <ControlPanel config={state.config} onChange={updateConfig} />
+          <ControlPanel
+            config={state.config}
+            onChange={updateConfig}
+            onAddBatch={addBatch}
+            snapshotsCount={snapshotsCount}
+            rewindTo={rewindTo}
+            exitRewind={exitRewind}
+            isRewind={isRewind}
+          />
         </aside>
 
         <main className="flex-1 flex flex-col min-w-0">
@@ -42,6 +62,7 @@ export function SimulatorPage() {
                 mainQueue={state.mainQueue}
                 retryQueue={state.retryQueue}
                 deadLetterQueue={state.deadLetterQueue}
+                maxQueueCapacity={state.config.maxQueueCapacity}
               />
             </div>
             <aside className="w-80 border-l border-slate-200 dark:border-slate-800 bg-slate-100/80 dark:bg-slate-900/50 overflow-y-auto">

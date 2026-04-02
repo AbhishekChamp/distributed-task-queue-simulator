@@ -2,6 +2,7 @@ import type { Task, Worker, SimulationConfig, SimulationEvent } from '../types'
 import { EventBus } from './eventBus'
 import { TaskQueue } from './queue'
 import { processTask } from './worker'
+import { createTask } from './task'
 
 export class Scheduler {
   private intervalId: number | null = null
@@ -14,6 +15,7 @@ export class Scheduler {
   private eventBus: EventBus
   private tasksProcessedLastSecond = 0
   private lastTick = Date.now()
+  private lastWorkerIndex = -1
 
   constructor(
     tasks: Map<string, Task>,
@@ -35,7 +37,7 @@ export class Scheduler {
 
   start(): void {
     if (this.intervalId !== null) return
-    this.intervalId = window.setInterval(() => this.tick(), 100)
+    this.intervalId = setInterval(() => this.tick(), 100)
   }
 
   stop(): void {
@@ -46,21 +48,25 @@ export class Scheduler {
   }
 
   private tick(): void {
+    this.recoverWorkers()
     this.processRetryQueue()
     this.assignTasks()
     this.updateMetrics()
     this.checkIdleState()
   }
 
-  private checkIdleState(): void {
-    const hasWork =
-      this.mainQueue.size > 0 || this.retryQueue.size > 0 || this.workers.some((w) => w.busy)
-    if (!hasWork && this.tasks.size > 0) {
-      this.stop()
-      this.emit({
-        type: 'ALL_TASKS_COMPLETED',
-        timestamp: Date.now(),
-      })
+  private recoverWorkers(): void {
+    const now = Date.now()
+    for (const worker of this.workers) {
+      if (!worker.healthy && now >= worker.cooldownUntil) {
+        worker.healthy = true
+        worker.consecutiveFailures = 0
+        this.emit({
+          type: 'WORKER_HEALTHY',
+          timestamp: now,
+          workerId: worker.id,
+        })
+      }
     }
   }
 
@@ -81,10 +87,43 @@ export class Scheduler {
   }
 
   private assignTasks(): void {
-    const idleWorkers = this.workers.filter((w) => !w.busy)
+    let idleWorkers = this.workers.filter((w) => !w.busy && w.healthy)
     if (idleWorkers.length === 0 || this.mainQueue.size === 0) return
 
-    for (const worker of idleWorkers) {
+    const strategy = this.config.loadBalancingStrategy || 'round-robin'
+
+    while (idleWorkers.length > 0 && this.mainQueue.size > 0) {
+      let worker: Worker | undefined
+
+      switch (strategy) {
+        case 'round-robin': {
+          const total = this.workers.length
+          let attempts = 0
+          while (attempts < total) {
+            this.lastWorkerIndex = (this.lastWorkerIndex + 1) % total
+            const candidate = this.workers[this.lastWorkerIndex]
+            if (!candidate.busy && candidate.healthy) {
+              worker = candidate
+              break
+            }
+            attempts++
+          }
+          break
+        }
+        case 'least-connections': {
+          worker = idleWorkers.sort((a, b) => a.processedCount - b.processedCount)[0]
+          break
+        }
+        case 'random': {
+          worker = idleWorkers[Math.floor(Math.random() * idleWorkers.length)]
+          break
+        }
+        default:
+          worker = idleWorkers[0]
+      }
+
+      if (!worker) break
+
       const taskId = this.mainQueue.dequeue()
       if (!taskId) break
 
@@ -111,6 +150,7 @@ export class Scheduler {
         if (result.success) {
           task.status = 'success'
           worker.processedCount += 1
+          worker.consecutiveFailures = 0
           this.tasksProcessedLastSecond += 1
           this.emit({
             type: 'TASK_COMPLETED',
@@ -118,16 +158,53 @@ export class Scheduler {
             taskId: task.id,
             workerId: worker.id,
           })
+          if (task.batchSize && task.batchSize > 1) {
+            this.spawnBatchTasks(task)
+          }
         } else {
           task.status = 'failed'
           task.error = result.error
+          worker.consecutiveFailures += 1
           this.handleTaskFailure(task, worker)
         }
       })
+
+      idleWorkers = this.workers.filter((w) => !w.busy && w.healthy)
     }
   }
 
+  private spawnBatchTasks(parentTask: Task): void {
+    const size = parentTask.batchSize || 1
+    for (let i = 0; i < size; i++) {
+      const sub = createTask(
+        Math.floor(Math.random() * 3),
+        this.config.maxRetries,
+        this.config.baseProcessingTime,
+      )
+      sub.parentId = parentTask.id
+      this.tasks.set(sub.id, sub)
+      this.mainQueue.enqueue(sub.id, sub.priority)
+    }
+    this.emit({
+      type: 'BATCH_SPAWNED',
+      timestamp: Date.now(),
+      taskId: parentTask.id,
+      message: `Spawned ${size} sub-tasks`,
+    })
+  }
+
   private handleTaskFailure(task: Task, worker: Worker): void {
+    if (this.config.enableCircuitBreaker && worker.consecutiveFailures >= 3 && worker.healthy) {
+      worker.healthy = false
+      worker.cooldownUntil = Date.now() + 3000
+      this.emit({
+        type: 'WORKER_UNHEALTHY',
+        timestamp: Date.now(),
+        workerId: worker.id,
+        message: 'Circuit breaker tripped',
+      })
+    }
+
     if (task.retryCount < task.maxRetries) {
       task.retryCount += 1
       task.status = 'retry'
@@ -167,6 +244,18 @@ export class Scheduler {
     if (now - this.lastTick >= 1000) {
       this.lastTick = now
       this.tasksProcessedLastSecond = 0
+    }
+  }
+
+  private checkIdleState(): void {
+    const hasWork =
+      this.mainQueue.size > 0 || this.retryQueue.size > 0 || this.workers.some((w) => w.busy)
+    if (!hasWork && this.tasks.size > 0) {
+      this.stop()
+      this.emit({
+        type: 'ALL_TASKS_COMPLETED',
+        timestamp: Date.now(),
+      })
     }
   }
 

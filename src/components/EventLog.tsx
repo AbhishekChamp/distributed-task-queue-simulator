@@ -14,7 +14,11 @@ const eventTypeColors: Record<SimulationEventType, string> = {
   TASK_MOVED_TO_DLQ: 'text-slate-600 dark:text-slate-400',
   WORKER_STARTED: 'text-violet-600 dark:text-violet-400',
   WORKER_IDLE: 'text-slate-500 dark:text-slate-500',
+  WORKER_HEALTHY: 'text-emerald-600 dark:text-emerald-400',
+  WORKER_UNHEALTHY: 'text-rose-600 dark:text-rose-400',
   SYSTEM_OVERLOAD: 'text-red-600 dark:text-red-400',
+  BACKPRESSURE_APPLIED: 'text-orange-600 dark:text-orange-400',
+  BATCH_SPAWNED: 'text-violet-600 dark:text-violet-400',
   ALL_TASKS_COMPLETED: 'text-emerald-600 dark:text-emerald-400',
 }
 
@@ -70,6 +74,11 @@ export function EventLog({ events }: EventLogProps) {
             {event.taskId && (
               <div className="text-slate-500 dark:text-slate-400 truncate">
                 task:{event.taskId.slice(-8)}
+              </div>
+            )}
+            {event.workerId && (
+              <div className="text-slate-500 dark:text-slate-400 truncate">
+                worker:{event.workerId}
               </div>
             )}
             {event.message && (

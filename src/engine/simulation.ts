@@ -3,7 +3,13 @@ import { EventBus } from './eventBus'
 import { TaskQueue } from './queue'
 import { createWorker } from './worker'
 import { Scheduler } from './scheduler'
-import { generateTasks } from './task'
+import { generateTasks, createTask } from './task'
+
+function percentile(sorted: number[], p: number): number {
+  if (sorted.length === 0) return 0
+  const idx = Math.ceil(sorted.length * p) - 1
+  return sorted[Math.max(0, idx)]
+}
 
 export class SimulationEngine {
   private eventBus: EventBus
@@ -28,6 +34,9 @@ export class SimulationEngine {
       maxRetries: 3,
       simulationSpeed: 1,
       baseProcessingTime: 1000,
+      maxQueueCapacity: 200,
+      loadBalancingStrategy: 'round-robin',
+      enableCircuitBreaker: true,
       ...config,
     }
 
@@ -58,7 +67,7 @@ export class SimulationEngine {
 
   private startMetricsSampling(): void {
     if (this.metricsIntervalId !== null) return
-    this.metricsIntervalId = window.setInterval(() => {
+    this.metricsIntervalId = setInterval(() => {
       const metrics = this.computeMetrics()
       this.metricsHistory.push({ ...metrics, timestamp: Date.now() })
       if (this.metricsHistory.length > this.maxMetricsHistory) {
@@ -90,6 +99,9 @@ export class SimulationEngine {
       w.busy = false
       w.currentTaskId = undefined
       w.processedCount = 0
+      w.healthy = true
+      w.cooldownUntil = 0
+      w.consecutiveFailures = 0
     })
     this.scheduler = new Scheduler(
       this.tasks,
@@ -102,15 +114,29 @@ export class SimulationEngine {
     )
   }
 
-  addTask(count = 1): void {
-    const newTasks = generateTasks(count, this.config.maxRetries, this.config.baseProcessingTime)
-    for (const task of newTasks) {
-      this.tasks.set(task.id, task)
-      this.mainQueue.enqueue(task.id, task.priority)
+  addTask(count = 1): number {
+    const capacity = this.config.maxQueueCapacity
+    const available = Math.max(0, capacity - this.mainQueue.size)
+    const toAdd = Math.min(count, available)
+
+    if (toAdd > 0) {
+      const newTasks = generateTasks(toAdd, this.config.maxRetries, this.config.baseProcessingTime)
+      for (const task of newTasks) {
+        this.tasks.set(task.id, task)
+        this.mainQueue.enqueue(task.id, task.priority)
+        this.eventBus.emit({
+          type: 'TASK_CREATED',
+          timestamp: Date.now(),
+          taskId: task.id,
+        })
+      }
+    }
+
+    if (count > available) {
       this.eventBus.emit({
-        type: 'TASK_CREATED',
+        type: 'BACKPRESSURE_APPLIED',
         timestamp: Date.now(),
-        taskId: task.id,
+        message: `Dropped ${count - available} tasks (capacity ${capacity})`,
       })
     }
 
@@ -119,6 +145,33 @@ export class SimulationEngine {
         type: 'SYSTEM_OVERLOAD',
         timestamp: Date.now(),
         message: `Queue depth reached ${this.mainQueue.size}`,
+      })
+    }
+
+    return toAdd
+  }
+
+  addBatch(batchSize: number): void {
+    const task = createTask(
+      Math.floor(Math.random() * 3),
+      this.config.maxRetries,
+      this.config.baseProcessingTime,
+      batchSize,
+    )
+    if (this.mainQueue.size < this.config.maxQueueCapacity) {
+      this.tasks.set(task.id, task)
+      this.mainQueue.enqueue(task.id, task.priority)
+      this.eventBus.emit({
+        type: 'TASK_CREATED',
+        timestamp: Date.now(),
+        taskId: task.id,
+        message: `Batch job with ${batchSize} sub-tasks`,
+      })
+    } else {
+      this.eventBus.emit({
+        type: 'BACKPRESSURE_APPLIED',
+        timestamp: Date.now(),
+        message: 'Batch rejected: queue at capacity',
       })
     }
   }
@@ -181,6 +234,11 @@ export class SimulationEngine {
     const totalCompleted = success + dead
     const failureRate = totalCompleted > 0 ? (dead / totalCompleted) * 100 : 0
 
+    const completedDurations = all
+      .filter((t) => t.status === 'success' || t.status === 'dead')
+      .map((t) => (t.completedAt || 0) - (t.startedAt || t.createdAt))
+      .sort((a, b) => a - b)
+
     return {
       queued,
       processing,
@@ -191,6 +249,9 @@ export class SimulationEngine {
       activeWorkers,
       tasksPerSecond: this.scheduler.getTasksPerSecond(),
       failureRate: Math.round(failureRate * 100) / 100,
+      p50Latency: percentile(completedDurations, 0.5),
+      p95Latency: percentile(completedDurations, 0.95),
+      p99Latency: percentile(completedDurations, 0.99),
     }
   }
 

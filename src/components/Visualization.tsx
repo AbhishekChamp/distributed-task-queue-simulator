@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion'
-import type { Task, Worker } from '../types'
+import type { Task, Worker, WorkerProfile } from '../types'
 
 interface VisualizationProps {
   tasks: Map<string, Task>
@@ -7,6 +7,14 @@ interface VisualizationProps {
   mainQueue: string[]
   retryQueue: string[]
   deadLetterQueue: string[]
+  maxQueueCapacity?: number
+}
+
+const profileColors: Record<WorkerProfile, string> = {
+  fast: 'bg-emerald-400',
+  normal: 'bg-sky-400',
+  slow: 'bg-amber-400',
+  unreliable: 'bg-rose-400',
 }
 
 export function Visualization({
@@ -15,11 +23,22 @@ export function Visualization({
   mainQueue,
   retryQueue,
   deadLetterQueue,
+  maxQueueCapacity = 200,
 }: VisualizationProps) {
   const mainCount = Math.min(mainQueue.length, 24)
   const retryCount = Math.min(retryQueue.length, 12)
   const dlqCount = Math.min(deadLetterQueue.length, 12)
   const isOverloaded = mainQueue.length > workers.length * 3
+  const isBackpressure = mainQueue.length >= maxQueueCapacity * 0.9
+
+  const priorityCounts = { high: 0, medium: 0, low: 0 }
+  for (const taskId of mainQueue) {
+    const task = tasks.get(taskId)
+    if (!task) continue
+    if (task.priority >= 2) priorityCounts.high++
+    else if (task.priority === 1) priorityCounts.medium++
+    else priorityCounts.low++
+  }
 
   return (
     <div className="space-y-6">
@@ -28,7 +47,13 @@ export function Visualization({
       </h2>
 
       <div className="flex items-center gap-4">
-        <StageBox label="Producer" count={tasks.size} color="bg-violet-600" />
+        <StageBox
+          label="Producer"
+          count={tasks.size}
+          color="bg-violet-600"
+          pulse={isBackpressure}
+          ringColor={isBackpressure ? 'ring-rose-500' : undefined}
+        />
         <Arrow />
         <StageBox
           label="Main Queue"
@@ -57,6 +82,39 @@ export function Visualization({
         />
       </div>
 
+      {mainQueue.length > 0 && (
+        <div className="space-y-1">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-slate-500 dark:text-slate-500">
+              Priority Lanes
+            </span>
+            <span className="text-xs text-slate-400 dark:text-slate-500">
+              High {priorityCounts.high} · Med {priorityCounts.medium} · Low {priorityCounts.low}
+            </span>
+          </div>
+          <div className="h-3 w-full rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden flex">
+            {priorityCounts.high > 0 && (
+              <div
+                className="bg-rose-500 h-full"
+                style={{ width: `${(priorityCounts.high / mainQueue.length) * 100}%` }}
+              />
+            )}
+            {priorityCounts.medium > 0 && (
+              <div
+                className="bg-amber-500 h-full"
+                style={{ width: `${(priorityCounts.medium / mainQueue.length) * 100}%` }}
+              />
+            )}
+            {priorityCounts.low > 0 && (
+              <div
+                className="bg-emerald-500 h-full"
+                style={{ width: `${(priorityCounts.low / mainQueue.length) * 100}%` }}
+              />
+            )}
+          </div>
+        </div>
+      )}
+
       <div className="grid grid-cols-3 gap-4">
         <QueueCard
           title="Main Queue"
@@ -79,21 +137,38 @@ export function Visualization({
       </div>
 
       <div className="space-y-2">
-        <h3 className="text-xs font-semibold text-slate-500 dark:text-slate-500">Worker Pool</h3>
+        <div className="flex items-center justify-between">
+          <h3 className="text-xs font-semibold text-slate-500 dark:text-slate-500">Worker Pool</h3>
+          <div className="flex items-center gap-2 text-xs text-slate-400 dark:text-slate-500">
+            <span>⚡ Fast</span>
+            <span>● Normal</span>
+            <span>🐢 Slow</span>
+            <span>⚠️ Unreliable</span>
+          </div>
+        </div>
         <div className="flex flex-wrap gap-2">
-          {workers.map((worker) => (
-            <motion.div
-              key={worker.id}
-              animate={{
-                scale: worker.busy ? 1.05 : 1,
-                backgroundColor: worker.busy ? '#f59e0b' : '#cbd5e1',
-              }}
-              className="w-10 h-10 rounded-md flex items-center justify-center text-xs font-bold text-slate-900 dark:text-slate-900"
-              title={`${worker.id} | Processed: ${worker.processedCount}`}
-            >
-              {worker.id.split('-')[1]}
-            </motion.div>
-          ))}
+          {workers.map((worker) => {
+            const isUnhealthy = !worker.healthy
+            return (
+              <motion.div
+                key={worker.id}
+                animate={{
+                  scale: worker.busy ? 1.05 : 1,
+                  backgroundColor: isUnhealthy ? '#f43f5e' : worker.busy ? '#f59e0b' : '#cbd5e1',
+                }}
+                className="w-10 h-10 rounded-md flex items-center justify-center text-sm font-bold text-slate-900 dark:text-slate-900 relative"
+                title={`${worker.id} | ${worker.profile} | Processed: ${worker.processedCount}${isUnhealthy ? ' | CIRCUIT BREAKER' : ''}`}
+              >
+                {worker.id.split('-')[1]}
+                <span
+                  className={`absolute -top-1 -right-1 w-3 h-3 rounded-full border-2 border-white dark:border-slate-900 ${profileColors[worker.profile]}`}
+                />
+                {isUnhealthy && (
+                  <span className="absolute -bottom-1 text-[8px] text-rose-600 font-bold">CB</span>
+                )}
+              </motion.div>
+            )
+          })}
         </div>
       </div>
 
@@ -127,16 +202,18 @@ function StageBox({
   count,
   color,
   pulse = false,
+  ringColor,
 }: {
   label: string
   count: number
   color: string
   pulse?: boolean
+  ringColor?: string
 }) {
   return (
     <div className="flex flex-col items-center gap-1">
       <div
-        className={`w-16 h-16 rounded-lg ${color} flex items-center justify-center text-white font-bold shadow-lg ${pulse ? 'animate-pulse' : ''}`}
+        className={`w-16 h-16 rounded-lg ${color} flex items-center justify-center text-white font-bold shadow-lg ${pulse ? 'animate-pulse' : ''} ${ringColor ? `ring-4 ${ringColor}` : ''}`}
       >
         {count}
       </div>

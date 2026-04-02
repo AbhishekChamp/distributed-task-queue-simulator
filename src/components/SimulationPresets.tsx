@@ -13,6 +13,9 @@ const presets: { label: string; config: SimulationConfig; color: string }[] = [
       maxRetries: 2,
       simulationSpeed: 1,
       baseProcessingTime: 800,
+      maxQueueCapacity: 200,
+      loadBalancingStrategy: 'round-robin',
+      enableCircuitBreaker: true,
     },
     color:
       'bg-emerald-100 dark:bg-emerald-600/20 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-200 dark:hover:bg-emerald-600/30',
@@ -25,6 +28,9 @@ const presets: { label: string; config: SimulationConfig; color: string }[] = [
       maxRetries: 5,
       simulationSpeed: 2,
       baseProcessingTime: 500,
+      maxQueueCapacity: 300,
+      loadBalancingStrategy: 'random',
+      enableCircuitBreaker: true,
     },
     color:
       'bg-rose-100 dark:bg-rose-600/20 text-rose-700 dark:text-rose-400 hover:bg-rose-200 dark:hover:bg-rose-600/30',
@@ -37,6 +43,9 @@ const presets: { label: string; config: SimulationConfig; color: string }[] = [
       maxRetries: 3,
       simulationSpeed: 3,
       baseProcessingTime: 1200,
+      maxQueueCapacity: 100,
+      loadBalancingStrategy: 'least-connections',
+      enableCircuitBreaker: true,
     },
     color:
       'bg-amber-100 dark:bg-amber-600/20 text-amber-700 dark:text-amber-400 hover:bg-amber-200 dark:hover:bg-amber-600/30',
@@ -49,6 +58,9 @@ const presets: { label: string; config: SimulationConfig; color: string }[] = [
       maxRetries: 0,
       simulationSpeed: 2,
       baseProcessingTime: 400,
+      maxQueueCapacity: 500,
+      loadBalancingStrategy: 'round-robin',
+      enableCircuitBreaker: false,
     },
     color:
       'bg-sky-100 dark:bg-sky-600/20 text-sky-700 dark:text-sky-400 hover:bg-sky-200 dark:hover:bg-sky-600/30',
