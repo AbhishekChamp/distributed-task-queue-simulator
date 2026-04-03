@@ -6,6 +6,8 @@ import type {
   Task,
   Worker,
   SimulationEvent,
+  WorkerUtilization,
+  BottleneckStage,
 } from '../types'
 
 export interface SimulationStoreState {
@@ -19,6 +21,8 @@ export interface SimulationStoreState {
   events: SimulationEvent[]
   metrics: SimulationMetrics
   metricsHistory: MetricsHistoryPoint[]
+  workerUtilization: WorkerUtilization[]
+  bottleneck: BottleneckStage
 }
 
 export const useSimulationStore = create<SimulationStoreState>(() => ({
@@ -54,6 +58,8 @@ export const useSimulationStore = create<SimulationStoreState>(() => ({
     p99Latency: 0,
   },
   metricsHistory: [],
+  workerUtilization: [],
+  bottleneck: 'none',
 }))
 
 export function setSimulationState(state: Partial<SimulationStoreState>): void {

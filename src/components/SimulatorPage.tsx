@@ -7,6 +7,8 @@ import { Visualization } from './Visualization'
 import { MetricsPanel } from './MetricsPanel'
 import { TaskTable } from './TaskTable'
 import { EventLog } from './EventLog'
+import { BottleneckAlert } from './BottleneckAlert'
+import { DLQInspector } from './DLQInspector'
 
 export function SimulatorPage() {
   const {
@@ -21,8 +23,11 @@ export function SimulatorPage() {
     rewindTo,
     exitRewind,
     isRewind,
+    exportState,
+    importState,
   } = useSimulation()
   const [bottomTab, setBottomTab] = useState<'tasks' | 'events'>('tasks')
+  const [showDLQ, setShowDLQ] = useState(false)
 
   useKeyboardShortcuts({
     onTogglePlay: () => (state.isRunning ? pause() : start()),
@@ -39,6 +44,8 @@ export function SimulatorPage() {
         onReset={reset}
         onAddTasks={addTasks}
       />
+
+      <BottleneckAlert stage={state.bottleneck} />
 
       <div className="flex flex-1 overflow-hidden">
         <aside className="w-64 border-r border-slate-200 dark:border-slate-800 bg-slate-100/80 dark:bg-slate-900/50 overflow-hidden flex flex-col">
@@ -66,7 +73,13 @@ export function SimulatorPage() {
               />
             </div>
             <aside className="w-80 border-l border-slate-200 dark:border-slate-800 bg-slate-100/80 dark:bg-slate-900/50 overflow-y-auto">
-              <MetricsPanel metrics={state.metrics} metricsHistory={state.metricsHistory} />
+              <MetricsPanel
+                metrics={state.metrics}
+                metricsHistory={state.metricsHistory}
+                workerUtilization={state.workerUtilization}
+                onExport={exportState}
+                onImport={importState}
+              />
             </aside>
           </div>
 
@@ -92,6 +105,13 @@ export function SimulatorPage() {
               >
                 Event Log
               </button>
+              <div className="flex-1" />
+              <button
+                onClick={() => setShowDLQ(true)}
+                className="px-3 py-2 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 transition"
+              >
+                DLQ Inspector
+              </button>
             </div>
             <div className="flex-1 overflow-hidden">
               {bottomTab === 'tasks' ? (
@@ -103,6 +123,14 @@ export function SimulatorPage() {
           </div>
         </main>
       </div>
+
+      {showDLQ && (
+        <DLQInspector
+          tasks={state.tasks}
+          deadLetterQueue={state.deadLetterQueue}
+          onClose={() => setShowDLQ(false)}
+        />
+      )}
     </div>
   )
 }

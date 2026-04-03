@@ -117,6 +117,41 @@ export function useSimulation() {
     if (latest) setSimulationState(latest)
   }, [])
 
+  const exportState = useCallback(() => {
+    const state = useSimulationStore.getState()
+    const exportable = {
+      ...state,
+      tasks: Array.from(state.tasks.entries()),
+      exportedAt: Date.now(),
+    }
+    const blob = new Blob([JSON.stringify(exportable, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `simulation-state-${Date.now()}.json`
+    a.click()
+    URL.revokeObjectURL(url)
+    toast.success('State exported')
+  }, [])
+
+  const importState = useCallback((file: File) => {
+    const reader = new FileReader()
+    reader.onload = () => {
+      try {
+        const parsed = JSON.parse(String(reader.result))
+        if (parsed.tasks && Array.isArray(parsed.tasks)) {
+          parsed.tasks = new Map(parsed.tasks)
+        }
+        workerRef.current?.postMessage({ type: 'PAUSE' })
+        setSimulationState({ ...parsed, isRunning: false })
+        toast.success('State imported')
+      } catch {
+        toast.error('Invalid state file')
+      }
+    }
+    reader.readAsText(file)
+  }, [])
+
   return {
     state: useSimulationStore(),
     start,
@@ -129,5 +164,7 @@ export function useSimulation() {
     rewindTo,
     exitRewind,
     isRewind,
+    exportState,
+    importState,
   }
 }

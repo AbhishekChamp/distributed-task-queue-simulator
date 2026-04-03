@@ -1,4 +1,11 @@
-import type { SimulationConfig, Task, SimulationEvent, MetricsHistoryPoint } from '../types'
+import type {
+  SimulationConfig,
+  Task,
+  SimulationEvent,
+  MetricsHistoryPoint,
+  WorkerUtilization,
+  BottleneckStage,
+} from '../types'
 import { EventBus } from './eventBus'
 import { TaskQueue } from './queue'
 import { createWorker } from './worker'
@@ -26,6 +33,8 @@ export class SimulationEngine {
   private metricsHistory: MetricsHistoryPoint[] = []
   private maxMetricsHistory = 300
   private metricsIntervalId: number | null = null
+  private workerUtilization: WorkerUtilization[] = []
+  private utilizationIntervalId: number | null = null
 
   constructor(config?: Partial<SimulationConfig>) {
     this.config = {
@@ -63,6 +72,7 @@ export class SimulationEngine {
 
     this.updateWorkers()
     this.startMetricsSampling()
+    this.startUtilizationSampling()
   }
 
   private startMetricsSampling(): void {
@@ -73,6 +83,24 @@ export class SimulationEngine {
       if (this.metricsHistory.length > this.maxMetricsHistory) {
         this.metricsHistory.shift()
       }
+    }, 500)
+  }
+
+  private startUtilizationSampling(): void {
+    if (this.utilizationIntervalId !== null) return
+    this.utilizationIntervalId = setInterval(() => {
+      this.workers.forEach((worker) => {
+        let entry = this.workerUtilization.find((u) => u.workerId === worker.id)
+        if (!entry) {
+          entry = { workerId: worker.id, history: [] }
+          this.workerUtilization.push(entry)
+        }
+        const status = worker.healthy ? (worker.busy ? 'busy' : 'idle') : 'unhealthy'
+        entry.history.push(status)
+        if (entry.history.length > 60) {
+          entry.history.shift()
+        }
+      })
     }, 500)
   }
 
@@ -95,6 +123,7 @@ export class SimulationEngine {
     this.deadLetterQueue = new TaskQueue()
     this.eventHistory = []
     this.metricsHistory = []
+    this.workerUtilization = []
     this.workers.forEach((w) => {
       w.busy = false
       w.currentTaskId = undefined
@@ -207,6 +236,27 @@ export class SimulationEngine {
     }
   }
 
+  private detectBottleneck(): BottleneckStage {
+    const busyWorkers = this.workers.filter((w) => w.busy).length
+    const totalWorkers = this.workers.length
+    const queueDepth = this.mainQueue.size
+    const retryDepth = this.retryQueue.size
+
+    if (queueDepth >= this.config.maxQueueCapacity * 0.9) {
+      return 'queue'
+    }
+    if (queueDepth > 0 && busyWorkers === totalWorkers && retryDepth < 5) {
+      return 'workers'
+    }
+    if (queueDepth === 0 && busyWorkers === 0 && this.tasks.size > 0) {
+      return 'none'
+    }
+    if (queueDepth > totalWorkers * 3) {
+      return 'queue'
+    }
+    return 'none'
+  }
+
   getState() {
     return {
       isRunning: this.isRunning,
@@ -219,6 +269,8 @@ export class SimulationEngine {
       events: [...this.eventHistory],
       metrics: this.computeMetrics(),
       metricsHistory: [...this.metricsHistory],
+      workerUtilization: this.workerUtilization.map((u) => ({ ...u, history: [...u.history] })),
+      bottleneck: this.detectBottleneck(),
     }
   }
 

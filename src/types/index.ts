@@ -60,6 +60,13 @@ export interface MetricsHistoryPoint extends SimulationMetrics {
   timestamp: number
 }
 
+export interface WorkerUtilization {
+  workerId: string
+  history: ('idle' | 'busy' | 'unhealthy')[]
+}
+
+export type BottleneckStage = 'producer' | 'queue' | 'workers' | 'none'
+
 export interface SimulationState {
   isRunning: boolean
   config: SimulationConfig
@@ -71,6 +78,8 @@ export interface SimulationState {
   metrics: SimulationMetrics
   metricsHistory: MetricsHistoryPoint[]
   events: SimulationEvent[]
+  workerUtilization: WorkerUtilization[]
+  bottleneck: BottleneckStage
 }
 
 export type SimulationEventType =
