@@ -7,9 +7,21 @@ interface TopBarProps {
   onPause: () => void
   onReset: () => void
   onAddTasks: (count: number) => void
+  onToggleFullscreen?: () => void
+  isFullscreen?: boolean
+  onCopyUrl?: () => void
 }
 
-export function TopBar({ isRunning, onStart, onPause, onReset, onAddTasks }: TopBarProps) {
+export function TopBar({
+  isRunning,
+  onStart,
+  onPause,
+  onReset,
+  onAddTasks,
+  onToggleFullscreen,
+  isFullscreen,
+  onCopyUrl,
+}: TopBarProps) {
   return (
     <header className="h-14 border-b border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-900 flex items-center justify-between px-4 shrink-0">
       <div className="flex items-center gap-2">
@@ -60,6 +72,25 @@ export function TopBar({ isRunning, onStart, onPause, onReset, onAddTasks }: Top
         ))}
 
         <div className="w-px h-6 bg-slate-300 dark:bg-slate-700 mx-1" />
+
+        {onCopyUrl && (
+          <button
+            onClick={onCopyUrl}
+            className="px-3 py-1.5 rounded-md bg-violet-100 dark:bg-violet-600/20 text-violet-700 dark:text-violet-400 hover:bg-violet-200 dark:hover:bg-violet-600/30 transition text-sm"
+            title="Copy shareable URL"
+          >
+            Share
+          </button>
+        )}
+
+        {onToggleFullscreen && (
+          <button
+            onClick={onToggleFullscreen}
+            className="px-3 py-1.5 rounded-md bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-700 transition text-sm"
+          >
+            {isFullscreen ? 'Exit' : 'Fullscreen'}
+          </button>
+        )}
 
         <ThemeToggle />
       </div>

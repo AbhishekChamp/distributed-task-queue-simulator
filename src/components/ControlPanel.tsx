@@ -9,6 +9,9 @@ interface ControlPanelProps {
   rewindTo?: (index: number) => void
   exitRewind?: () => void
   isRewind?: boolean
+  isFullscreen?: boolean
+  audioConsent?: boolean
+  onToggleAudio?: () => void
 }
 
 export function ControlPanel({
@@ -19,7 +22,33 @@ export function ControlPanel({
   rewindTo,
   exitRewind,
   isRewind = false,
+  isFullscreen = false,
+  audioConsent = false,
+  onToggleAudio,
 }: ControlPanelProps) {
+  if (isFullscreen) {
+    return (
+      <div className="flex flex-col h-full items-center py-2 gap-2">
+        <button
+          onClick={() => onAddBatch && onAddBatch(10)}
+          className="w-10 h-10 rounded-md bg-violet-600 text-white text-xs font-bold flex items-center justify-center"
+          title="Batch"
+        >
+          B
+        </button>
+        <div className="w-8 h-px bg-slate-300 dark:bg-slate-700" />
+        <div className="flex flex-col gap-1 text-[9px] text-slate-500 dark:text-slate-400 text-center">
+          <span>W</span>
+          <span>{config.workerCount}</span>
+        </div>
+        <div className="flex flex-col gap-1 text-[9px] text-slate-500 dark:text-slate-400 text-center">
+          <span>F</span>
+          <span>{config.failureProbability}%</span>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="flex flex-col h-full">
       <div className="p-4 space-y-6 flex-1 overflow-y-auto">
@@ -114,6 +143,18 @@ export function ControlPanel({
             />
             Enable Circuit Breaker
           </label>
+
+          {onToggleAudio && (
+            <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={audioConsent}
+                onChange={onToggleAudio}
+                className="accent-sky-500"
+              />
+              Enable Audio Feedback
+            </label>
+          )}
 
           {onAddBatch && (
             <div className="pt-2 border-t border-slate-200 dark:border-slate-800">

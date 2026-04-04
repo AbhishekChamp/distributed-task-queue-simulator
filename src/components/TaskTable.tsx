@@ -1,4 +1,5 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useRef } from 'react'
+import { useVirtualizer } from '@tanstack/react-virtual'
 import type { Task, TaskStatus } from '../types'
 import { TaskDetail } from './TaskDetail'
 import { Filter, X } from './icons'
@@ -14,6 +15,7 @@ export function TaskTable({ tasks }: TaskTableProps) {
   const [filter, setFilter] = useState<TaskStatus | 'all'>('all')
   const [showFailedOnly, setShowFailedOnly] = useState(false)
   const [showRetriedOnly, setShowRetriedOnly] = useState(false)
+  const parentRef = useRef<HTMLDivElement>(null)
 
   const allTasks = useMemo(() => Array.from(tasks.values()), [tasks])
 
@@ -28,11 +30,16 @@ export function TaskTable({ tasks }: TaskTableProps) {
     if (showRetriedOnly) {
       result = result.filter((t) => t.retryCount > 0)
     }
-    return result
-      .slice()
-      .sort((a, b) => b.createdAt - a.createdAt)
-      .slice(0, 100)
+    return result.slice().sort((a, b) => b.createdAt - a.createdAt)
   }, [allTasks, filter, showFailedOnly, showRetriedOnly])
+
+  // eslint-disable-next-line react-hooks/incompatible-library
+  const virtualizer = useVirtualizer({
+    count: filteredTasks.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 40,
+    overscan: 10,
+  })
 
   const selectedTask = selectedTaskId ? tasks.get(selectedTaskId) || null : null
 
@@ -80,51 +87,51 @@ export function TaskTable({ tasks }: TaskTableProps) {
         </span>
       </div>
 
-      <div className="flex-1 overflow-auto">
-        <table className="w-full text-left text-xs">
-          <thead className="sticky top-0 bg-slate-100/90 dark:bg-slate-900/90 backdrop-blur">
-            <tr className="text-slate-500 dark:text-slate-500">
-              <th className="px-4 py-2 font-medium">ID</th>
-              <th className="px-4 py-2 font-medium">Status</th>
-              <th className="px-4 py-2 font-medium">Retries</th>
-              <th className="px-4 py-2 font-medium">Duration</th>
-              <th className="px-4 py-2 font-medium">Created</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredTasks.map((task) => (
-              <tr
+      <div ref={parentRef} className="flex-1 overflow-auto">
+        <div className="relative w-full" style={{ height: `${virtualizer.getTotalSize()}px` }}>
+          <div className="sticky top-0 z-10 flex bg-slate-100/90 dark:bg-slate-900/90 backdrop-blur text-slate-500 dark:text-slate-500 text-xs border-b border-slate-200 dark:border-slate-800">
+            <div className="flex-1 px-4 py-2 font-medium min-w-[120px]">ID</div>
+            <div className="w-24 px-4 py-2 font-medium">Status</div>
+            <div className="w-20 px-4 py-2 font-medium">Retries</div>
+            <div className="w-24 px-4 py-2 font-medium">Duration</div>
+            <div className="w-28 px-4 py-2 font-medium">Created</div>
+          </div>
+          {filteredTasks.length === 0 && (
+            <div className="px-4 py-8 text-center text-xs text-slate-400 dark:text-slate-500">
+              No tasks match the current filters.
+            </div>
+          )}
+          {virtualizer.getVirtualItems().map((virtualRow) => {
+            const task = filteredTasks[virtualRow.index]
+            return (
+              <div
                 key={task.id}
                 onClick={() => setSelectedTaskId(task.id)}
-                className="border-b border-slate-200/50 dark:border-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800/40 cursor-pointer transition"
+                className="absolute left-0 right-0 flex items-center text-xs border-b border-slate-200/50 dark:border-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800/40 cursor-pointer transition"
+                style={{
+                  transform: `translateY(${virtualRow.start}px)`,
+                  height: `${virtualRow.size}px`,
+                }}
               >
-                <td className="px-4 py-2 font-mono text-slate-700 dark:text-slate-300">
+                <div className="flex-1 px-4 py-2 font-mono text-slate-700 dark:text-slate-300 min-w-[120px] truncate">
                   {task.id.slice(-12)}
-                </td>
-                <td className="px-4 py-2">
+                </div>
+                <div className="w-24 px-4 py-2">
                   <StatusBadge status={task.status} />
-                </td>
-                <td className="px-4 py-2 text-slate-500 dark:text-slate-400">{task.retryCount}</td>
-                <td className="px-4 py-2 text-slate-500 dark:text-slate-400">
+                </div>
+                <div className="w-20 px-4 py-2 text-slate-500 dark:text-slate-400">
+                  {task.retryCount}
+                </div>
+                <div className="w-24 px-4 py-2 text-slate-500 dark:text-slate-400">
                   {Math.round(task.duration)}ms
-                </td>
-                <td className="px-4 py-2 text-slate-500 dark:text-slate-400">
+                </div>
+                <div className="w-28 px-4 py-2 text-slate-500 dark:text-slate-400">
                   {new Date(task.createdAt).toLocaleTimeString()}
-                </td>
-              </tr>
-            ))}
-            {filteredTasks.length === 0 && (
-              <tr>
-                <td
-                  colSpan={5}
-                  className="px-4 py-8 text-center text-slate-400 dark:text-slate-500"
-                >
-                  No tasks match the current filters.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+                </div>
+              </div>
+            )
+          })}
+        </div>
       </div>
 
       {selectedTask && (

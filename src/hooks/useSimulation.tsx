@@ -2,6 +2,8 @@ import { useEffect, useRef, useCallback, useState } from 'react'
 import { setSimulationState, useSimulationStore } from '../store/useSimulationStore'
 import type { SimulationConfig, SimulationEvent, SimulationState } from '../types'
 import toast from 'react-hot-toast'
+import { useAudioFeedback } from './useAudioFeedback'
+import { readConfigFromUrl } from './useShareableUrl'
 
 const CONFIG_KEY = 'dtq-config'
 const MAX_SNAPSHOTS = 120
@@ -16,31 +18,77 @@ function loadStoredConfig(): Partial<SimulationConfig> | undefined {
   return undefined
 }
 
+function saveConfig(config: SimulationConfig): void {
+  try {
+    localStorage.setItem(CONFIG_KEY, JSON.stringify(config))
+  } catch {
+    // ignore
+  }
+}
+
 export function useSimulation() {
   const workerRef = useRef<Worker | null>(null)
   const snapshotsRef = useRef<SimulationState[]>([])
   const [snapshotsCount, setSnapshotsCount] = useState(0)
   const [isRewind, setIsRewind] = useState(false)
+  const [showDLQFromToast, setShowDLQFromToast] = useState(false)
+  const audio = useAudioFeedback()
 
-  const handleEvent = useCallback((event: SimulationEvent) => {
-    if (event.type === 'TASK_FAILED') {
-      toast.error(`Task ${event.taskId?.slice(-6)} failed`, { duration: 1500 })
-    }
-    if (event.type === 'TASK_MOVED_TO_DLQ') {
-      toast.error(`Task moved to DLQ: ${event.taskId?.slice(-6)}`, { duration: 2000 })
-    }
-    if (event.type === 'SYSTEM_OVERLOAD') {
-      toast(`System overload: ${event.message}`, { icon: '⚠️', duration: 2500 })
-    }
-    if (event.type === 'BACKPRESSURE_APPLIED') {
-      toast(`Backpressure: ${event.message}`, { icon: '🛑', duration: 3000 })
-    }
-    if (event.type === 'WORKER_UNHEALTHY') {
-      toast.error(`Worker ${event.workerId} tripped circuit breaker`, { duration: 2000 })
-    }
-  }, [])
+  const handleEvent = useCallback(
+    (event: SimulationEvent) => {
+      if (event.type === 'TASK_COMPLETED') {
+        audio.playSuccess()
+        return
+      }
+      if (event.type === 'TASK_FAILED') {
+        audio.playFailure()
+        toast.error(`Task ${event.taskId?.slice(-6)} failed`, { duration: 1500 })
+        return
+      }
+      if (event.type === 'TASK_MOVED_TO_DLQ') {
+        audio.playFailure()
+        toast.error(
+          <div className="flex flex-col gap-1">
+            <span>Task moved to DLQ: {event.taskId?.slice(-6)}</span>
+            <button
+              onClick={() => setShowDLQFromToast(true)}
+              className="text-left text-xs underline text-slate-300 hover:text-white"
+            >
+              Open DLQ Inspector
+            </button>
+          </div>,
+          { duration: 3000 },
+        )
+        return
+      }
+      if (event.type === 'TASK_RETRIED') {
+        toast(
+          <div className="flex flex-col gap-1">
+            <span>Retrying {event.taskId?.slice(-6)}</span>
+            <span className="text-xs text-slate-400">{event.message}</span>
+          </div>,
+          { icon: '🔁', duration: 2000 },
+        )
+        return
+      }
+      if (event.type === 'SYSTEM_OVERLOAD') {
+        toast(`System overload: ${event.message}`, { icon: '⚠️', duration: 2500 })
+        return
+      }
+      if (event.type === 'BACKPRESSURE_APPLIED') {
+        toast(`Backpressure: ${event.message}`, { icon: '🛑', duration: 3000 })
+        return
+      }
+      if (event.type === 'WORKER_UNHEALTHY') {
+        audio.playFailure()
+        toast.error(`Worker ${event.workerId} tripped circuit breaker`, { duration: 2000 })
+      }
+    },
+    [audio],
+  )
 
   useEffect(() => {
+    const urlConfig = readConfigFromUrl()
     const stored = loadStoredConfig()
     const worker = new Worker(new URL('../workers/simulation.worker.ts', import.meta.url), {
       type: 'module',
@@ -57,6 +105,7 @@ export function useSimulation() {
           }
           setSnapshotsCount(snapshotsRef.current.length)
           setSimulationState(state)
+          saveConfig(state.config)
         }
       } else if (e.data.type === 'EVENT') {
         const event: SimulationEvent = e.data.event
@@ -64,7 +113,7 @@ export function useSimulation() {
       }
     }
 
-    worker.postMessage({ type: 'INIT', payload: { config: stored } })
+    worker.postMessage({ type: 'INIT', payload: { config: urlConfig ?? stored } })
 
     return () => {
       worker.terminate()
@@ -73,30 +122,41 @@ export function useSimulation() {
   }, [handleEvent, isRewind])
 
   const start = useCallback(() => {
+    audio.playClick()
     setIsRewind(false)
     const latest = snapshotsRef.current[snapshotsRef.current.length - 1]
     if (latest) setSimulationState(latest)
     workerRef.current?.postMessage({ type: 'START' })
-  }, [])
+  }, [audio])
 
   const pause = useCallback(() => {
+    audio.playClick()
     workerRef.current?.postMessage({ type: 'PAUSE' })
-  }, [])
+  }, [audio])
 
   const reset = useCallback(() => {
+    audio.playClick()
     snapshotsRef.current = []
     setSnapshotsCount(0)
     setIsRewind(false)
     workerRef.current?.postMessage({ type: 'RESET' })
-  }, [])
+  }, [audio])
 
-  const addTasks = useCallback((count: number) => {
-    workerRef.current?.postMessage({ type: 'ADD_TASKS', payload: { count } })
-  }, [])
+  const addTasks = useCallback(
+    (count: number) => {
+      audio.playClick()
+      workerRef.current?.postMessage({ type: 'ADD_TASKS', payload: { count } })
+    },
+    [audio],
+  )
 
-  const addBatch = useCallback((batchSize: number) => {
-    workerRef.current?.postMessage({ type: 'ADD_BATCH', payload: { batchSize } })
-  }, [])
+  const addBatch = useCallback(
+    (batchSize: number) => {
+      audio.playClick()
+      workerRef.current?.postMessage({ type: 'ADD_BATCH', payload: { batchSize } })
+    },
+    [audio],
+  )
 
   const updateConfig = useCallback((config: Partial<SimulationConfig>) => {
     workerRef.current?.postMessage({ type: 'UPDATE_CONFIG', payload: { config } })
@@ -166,5 +226,9 @@ export function useSimulation() {
     isRewind,
     exportState,
     importState,
+    showDLQFromToast,
+    setShowDLQFromToast,
+    audioConsent: audio.getConsent(),
+    setAudioConsent: audio.setConsent,
   }
 }
