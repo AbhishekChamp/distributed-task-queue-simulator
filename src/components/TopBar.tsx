@@ -1,3 +1,4 @@
+import { Link } from '@tanstack/react-router'
 import { Play, Pause, RotateCcw, Plus } from './icons'
 import { ThemeToggle } from './ThemeToggle'
 
@@ -100,6 +101,13 @@ export function TopBar({
             {isFullscreen ? 'Exit' : 'Fullscreen'}
           </button>
         )}
+
+        <Link
+          to="/about"
+          className="px-3 py-1.5 rounded-md bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-700 transition text-sm"
+        >
+          About
+        </Link>
 
         <ThemeToggle />
       </nav>

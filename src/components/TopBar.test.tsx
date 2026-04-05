@@ -2,6 +2,16 @@ import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { TopBar } from './TopBar'
 
+vi.mock('@tanstack/react-router', async () => {
+  const actual = await vi.importActual('@tanstack/react-router')
+  return {
+    ...actual,
+    Link: ({ children, ...props }: React.AnchorHTMLAttributes<HTMLAnchorElement>) => (
+      <a {...props}>{children}</a>
+    ),
+  }
+})
+
 describe('TopBar', () => {
   it('shows Start button when not running', () => {
     render(
