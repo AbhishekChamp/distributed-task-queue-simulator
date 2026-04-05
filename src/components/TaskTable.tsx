@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef } from 'react'
+import { useState, useMemo, useRef, useEffect } from 'react'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import type { Task, TaskStatus } from '../types'
 import { TaskDetail } from './TaskDetail'
@@ -16,6 +16,13 @@ export function TaskTable({ tasks }: TaskTableProps) {
   const [showFailedOnly, setShowFailedOnly] = useState(false)
   const [showRetriedOnly, setShowRetriedOnly] = useState(false)
   const parentRef = useRef<HTMLDivElement>(null)
+  const closeButtonRef = useRef<HTMLButtonElement>(null)
+
+  useEffect(() => {
+    if (selectedTaskId) {
+      closeButtonRef.current?.focus()
+    }
+  }, [selectedTaskId])
 
   const allTasks = useMemo(() => Array.from(tasks.values()), [tasks])
 
@@ -135,14 +142,27 @@ export function TaskTable({ tasks }: TaskTableProps) {
       </div>
 
       {selectedTask && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 dark:bg-black/60 p-4">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 dark:bg-black/60 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="task-detail-title"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setSelectedTaskId(null)
+          }}
+        >
           <div className="w-full max-w-lg rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-2xl">
             <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 dark:border-slate-800">
-              <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+              <h3
+                id="task-detail-title"
+                className="text-sm font-semibold text-slate-900 dark:text-slate-100"
+              >
                 Task Lifecycle
               </h3>
               <button
+                ref={closeButtonRef}
                 onClick={() => setSelectedTaskId(null)}
+                aria-label="Close task detail"
                 className="text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200"
               >
                 <X className="w-5 h-5" />

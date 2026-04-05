@@ -1,5 +1,6 @@
 import { motion, AnimatePresence } from 'framer-motion'
 import type { Task, Worker, WorkerProfile } from '../types'
+import { useReducedMotion } from '../hooks/useReducedMotion'
 
 interface VisualizationProps {
   tasks: Map<string, Task>
@@ -25,6 +26,7 @@ export function Visualization({
   deadLetterQueue,
   maxQueueCapacity = 200,
 }: VisualizationProps) {
+  const reducedMotion = useReducedMotion()
   const mainCount = Math.min(mainQueue.length, 24)
   const retryCount = Math.min(retryQueue.length, 12)
   const dlqCount = Math.min(deadLetterQueue.length, 12)
@@ -46,28 +48,31 @@ export function Visualization({
         Pipeline
       </h2>
 
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-4" aria-label="Simulation pipeline overview">
         <StageBox
           label="Producer"
           count={tasks.size}
           color="bg-violet-600"
           pulse={isBackpressure}
           ringColor={isBackpressure ? 'ring-rose-500' : undefined}
+          aria-label={`Producer stage with ${tasks.size} tasks`}
         />
-        <Arrow />
+        <Arrow aria-label="Pipeline arrow" />
         <StageBox
           label="Main Queue"
           count={mainQueue.length}
           color={isOverloaded ? 'bg-rose-600' : 'bg-sky-600'}
           pulse={isOverloaded}
+          aria-label={`Main queue with ${mainQueue.length} tasks`}
         />
-        <Arrow />
+        <Arrow aria-label="Pipeline arrow" />
         <StageBox
           label="Workers"
           count={workers.filter((w) => w.busy).length}
           color="bg-amber-600"
+          aria-label={`Workers stage with ${workers.filter((w) => w.busy).length} active workers`}
         />
-        <Arrow />
+        <Arrow aria-label="Pipeline arrow" />
         <StageBox
           label="Results"
           count={
@@ -79,6 +84,7 @@ export function Visualization({
               : 0
           }
           color="bg-emerald-600"
+          aria-label={`Results stage with ${tasks.size > 0 ? Math.max(0, tasks.size - mainQueue.length - retryQueue.length - deadLetterQueue.length) : 0} completed tasks`}
         />
       </div>
 
@@ -92,7 +98,11 @@ export function Visualization({
               High {priorityCounts.high} · Med {priorityCounts.medium} · Low {priorityCounts.low}
             </span>
           </div>
-          <div className="h-3 w-full rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden flex">
+          <div
+            className="h-3 w-full rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden flex"
+            aria-label={`Priority distribution: ${priorityCounts.high} high, ${priorityCounts.medium} medium, ${priorityCounts.low} low`}
+            role="img"
+          >
             {priorityCounts.high > 0 && (
               <div
                 className="bg-rose-500 h-full"
@@ -152,16 +162,30 @@ export function Visualization({
             return (
               <motion.div
                 key={worker.id}
-                animate={{
-                  scale: worker.busy ? 1.05 : 1,
-                  backgroundColor: isUnhealthy ? '#f43f5e' : worker.busy ? '#f59e0b' : '#cbd5e1',
-                }}
+                animate={
+                  reducedMotion
+                    ? {}
+                    : {
+                        scale: worker.busy ? 1.05 : 1,
+                        backgroundColor: isUnhealthy
+                          ? '#f43f5e'
+                          : worker.busy
+                            ? '#f59e0b'
+                            : '#cbd5e1',
+                      }
+                }
                 className="w-10 h-10 rounded-md flex items-center justify-center text-sm font-bold text-slate-900 dark:text-slate-900 relative"
                 title={`${worker.id} | ${worker.profile} | Processed: ${worker.processedCount}${isUnhealthy ? ' | CIRCUIT BREAKER' : ''}`}
+                aria-label={`Worker ${worker.id}, profile ${worker.profile}, processed ${worker.processedCount} tasks${isUnhealthy ? ', circuit breaker active' : ''}`}
+                role="img"
+                style={{
+                  backgroundColor: isUnhealthy ? '#f43f5e' : worker.busy ? '#f59e0b' : '#cbd5e1',
+                }}
               >
                 {worker.id.split('-')[1]}
                 <span
                   className={`absolute -top-1 -right-1 w-3 h-3 rounded-full border-2 border-white dark:border-slate-900 ${profileColors[worker.profile]}`}
+                  aria-hidden="true"
                 />
                 {isUnhealthy && (
                   <span className="absolute -bottom-1 text-[8px] text-rose-600 font-bold">CB</span>
@@ -183,11 +207,13 @@ export function Visualization({
                 <motion.div
                   key={task.id}
                   layoutId={task.id}
-                  initial={{ opacity: 0, scale: 0 }}
+                  initial={reducedMotion ? false : { opacity: 0, scale: 0 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0 }}
+                  exit={reducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0 }}
+                  transition={reducedMotion ? { duration: 0 } : undefined}
                   className="w-6 h-6 rounded bg-amber-500"
                   title={task.id}
+                  aria-hidden="true"
                 />
               ))}
           </AnimatePresence>
@@ -203,16 +229,20 @@ function StageBox({
   color,
   pulse = false,
   ringColor,
+  'aria-label': ariaLabel,
 }: {
   label: string
   count: number
   color: string
   pulse?: boolean
   ringColor?: string
+  'aria-label'?: string
 }) {
   return (
     <div className="flex flex-col items-center gap-1">
       <div
+        aria-label={ariaLabel}
+        role="img"
         className={`w-16 h-16 rounded-lg ${color} flex items-center justify-center text-white font-bold shadow-lg ${pulse ? 'animate-pulse' : ''} ${ringColor ? `ring-4 ${ringColor}` : ''}`}
       >
         {count}
@@ -222,8 +252,16 @@ function StageBox({
   )
 }
 
-function Arrow() {
-  return <div className="text-slate-400 dark:text-slate-600 text-xl">→</div>
+function Arrow({ 'aria-label': ariaLabel }: { 'aria-label'?: string }) {
+  return (
+    <div
+      className="text-slate-400 dark:text-slate-600 text-xl"
+      aria-label={ariaLabel}
+      aria-hidden="true"
+    >
+      →
+    </div>
+  )
 }
 
 function QueueCard({

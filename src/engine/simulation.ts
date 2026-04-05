@@ -32,9 +32,9 @@ export class SimulationEngine {
   private maxHistory = 200
   private metricsHistory: MetricsHistoryPoint[] = []
   private maxMetricsHistory = 300
-  private metricsIntervalId: number | null = null
+  private metricsIntervalId: ReturnType<typeof setInterval> | null = null
   private workerUtilization: WorkerUtilization[] = []
-  private utilizationIntervalId: number | null = null
+  private utilizationIntervalId: ReturnType<typeof setInterval> | null = null
 
   constructor(config?: Partial<SimulationConfig>) {
     this.config = {

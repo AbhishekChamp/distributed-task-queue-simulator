@@ -47,6 +47,8 @@ export function useShareableUrl(config: SimulationConfig) {
       return
     }
     const qs = serializeConfig(config)
+    const currentQs = window.location.search.replace(/^\?/, '')
+    if (qs === currentQs) return
     const url = `${window.location.pathname}?${qs}`
     window.history.replaceState(null, '', url)
   }, [config])

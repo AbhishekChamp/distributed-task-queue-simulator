@@ -1,4 +1,4 @@
-import { useCallback, useRef } from 'react'
+import { useCallback, useMemo, useRef } from 'react'
 
 const AUDIO_CONSENT_KEY = 'dtq-audio-consent'
 
@@ -55,5 +55,8 @@ export function useAudioFeedback() {
     playTone(600, 0.03, 'triangle')
   }, [playTone])
 
-  return { getConsent, setConsent, playSuccess, playFailure, playClick }
+  return useMemo(
+    () => ({ getConsent, setConsent, playSuccess, playFailure, playClick }),
+    [getConsent, setConsent, playSuccess, playFailure, playClick],
+  )
 }

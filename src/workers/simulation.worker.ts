@@ -2,7 +2,7 @@ import { SimulationEngine } from '../engine/simulation'
 import type { SimulationEvent } from '../types'
 
 let engine: SimulationEngine | null = null
-let intervalId: number | null = null
+let intervalId: ReturnType<typeof setInterval> | null = null
 
 function broadcastState() {
   if (!engine) return

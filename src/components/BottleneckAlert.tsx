@@ -30,7 +30,12 @@ const messages: Record<BottleneckStage, { text: string; color: string }> = {
 export function BottleneckAlert({ stage }: BottleneckAlertProps) {
   const msg = messages[stage]
   return (
-    <div className={`mx-4 my-3 px-3 py-2 rounded-md border text-xs font-medium ${msg.color}`}>
+    <div
+      role="status"
+      aria-live="polite"
+      aria-atomic="true"
+      className={`mx-4 my-3 px-3 py-2 rounded-md border text-xs font-medium ${msg.color}`}
+    >
       {msg.text}
     </div>
   )

@@ -78,6 +78,7 @@ export function MetricsPanel({
                 width={80}
                 height={28}
                 color={item.color}
+                aria-label={`${item.label} trend chart`}
               />
             </div>
           )
@@ -154,15 +155,20 @@ export function MetricsPanel({
       <div className="pt-4 border-t border-slate-200 dark:border-slate-800 flex gap-2">
         <button
           onClick={onExport}
+          aria-label="Export simulation state as JSON"
           className="flex-1 px-2 py-1.5 rounded-md bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-medium hover:bg-slate-300 dark:hover:bg-slate-700 transition"
         >
           Export State
         </button>
-        <label className="flex-1 px-2 py-1.5 rounded-md bg-sky-100 dark:bg-sky-600/20 text-sky-700 dark:text-sky-400 text-xs font-medium hover:bg-sky-200 dark:hover:bg-sky-600/30 transition text-center cursor-pointer">
+        <label
+          aria-label="Import simulation state from JSON file"
+          className="flex-1 px-2 py-1.5 rounded-md bg-sky-100 dark:bg-sky-600/20 text-sky-700 dark:text-sky-400 text-xs font-medium hover:bg-sky-200 dark:hover:bg-sky-600/30 transition text-center cursor-pointer"
+        >
           Import State
           <input
             type="file"
             accept="application/json"
+            aria-label="Choose JSON file to import"
             className="hidden"
             onChange={(e) => {
               const file = e.target.files?.[0]

@@ -6,6 +6,7 @@ interface SparklineProps {
   height?: number
   color?: string
   fill?: boolean
+  'aria-label'?: string
 }
 
 export function Sparkline({
@@ -14,6 +15,7 @@ export function Sparkline({
   height = 32,
   color = '#38bdf8',
   fill = true,
+  'aria-label': ariaLabel,
 }: SparklineProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
@@ -62,5 +64,5 @@ export function Sparkline({
     }
   }, [data, width, height, color, fill])
 
-  return <canvas ref={canvasRef} className="block" />
+  return <canvas ref={canvasRef} className="block" aria-label={ariaLabel} role="img" />
 }

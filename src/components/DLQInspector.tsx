@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useRef, useEffect } from 'react'
 import type { Task } from '../types'
 import { X } from './icons'
 
@@ -9,6 +9,12 @@ interface DLQInspectorProps {
 }
 
 export function DLQInspector({ tasks, deadLetterQueue, onClose }: DLQInspectorProps) {
+  const closeButtonRef = useRef<HTMLButtonElement>(null)
+
+  useEffect(() => {
+    closeButtonRef.current?.focus()
+  }, [])
+
   const deadTasks = useMemo(() => {
     return deadLetterQueue
       .map((id) => tasks.get(id))
@@ -27,14 +33,24 @@ export function DLQInspector({ tasks, deadLetterQueue, onClose }: DLQInspectorPr
   }, [deadTasks])
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 dark:bg-black/60 p-4">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 dark:bg-black/60 p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="dlq-title"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose()
+      }}
+    >
       <div className="w-full max-w-3xl max-h-[80vh] flex flex-col rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-2xl">
         <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 dark:border-slate-800">
-          <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+          <h3 id="dlq-title" className="text-sm font-semibold text-slate-900 dark:text-slate-100">
             Dead Letter Queue Inspector
           </h3>
           <button
+            ref={closeButtonRef}
             onClick={onClose}
+            aria-label="Close Dead Letter Queue Inspector"
             className="text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200"
           >
             <X className="w-5 h-5" />

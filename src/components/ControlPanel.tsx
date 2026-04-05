@@ -33,6 +33,7 @@ export function ControlPanel({
           onClick={() => onAddBatch && onAddBatch(10)}
           className="w-10 h-10 rounded-md bg-violet-600 text-white text-xs font-bold flex items-center justify-center"
           title="Batch"
+          aria-label="Add batch of 10 sub-tasks"
         >
           B
         </button>
@@ -65,6 +66,7 @@ export function ControlPanel({
               value={config.workerCount}
               onChange={(e) => onChange({ workerCount: Number(e.target.value) })}
               className="w-full accent-sky-500"
+              aria-label="Worker count"
             />
           </ControlRow>
 
@@ -76,6 +78,7 @@ export function ControlPanel({
               value={config.failureProbability}
               onChange={(e) => onChange({ failureProbability: Number(e.target.value) })}
               className="w-full accent-rose-500"
+              aria-label="Failure probability percent"
             />
           </ControlRow>
 
@@ -87,6 +90,7 @@ export function ControlPanel({
               value={config.maxRetries}
               onChange={(e) => onChange({ maxRetries: Number(e.target.value) })}
               className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded px-2 py-1 text-sm text-slate-800 dark:text-slate-200"
+              aria-label="Maximum retries"
             />
           </ControlRow>
 
@@ -99,6 +103,7 @@ export function ControlPanel({
               value={config.simulationSpeed}
               onChange={(e) => onChange({ simulationSpeed: Number(e.target.value) })}
               className="w-full accent-emerald-500"
+              aria-label="Simulation speed multiplier"
             />
           </ControlRow>
 
@@ -111,6 +116,7 @@ export function ControlPanel({
               value={config.maxQueueCapacity}
               onChange={(e) => onChange({ maxQueueCapacity: Number(e.target.value) })}
               className="w-full accent-violet-500"
+              aria-label="Maximum queue capacity"
             />
           </ControlRow>
 
@@ -127,6 +133,7 @@ export function ControlPanel({
                 })
               }
               className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded px-2 py-1 text-sm text-slate-800 dark:text-slate-200"
+              aria-label="Load balancing strategy"
             >
               <option value="round-robin">Round Robin</option>
               <option value="least-connections">Least Connections</option>
@@ -140,6 +147,7 @@ export function ControlPanel({
               checked={config.enableCircuitBreaker}
               onChange={(e) => onChange({ enableCircuitBreaker: e.target.checked })}
               className="accent-sky-500"
+              aria-label="Enable circuit breaker"
             />
             Enable Circuit Breaker
           </label>
@@ -151,6 +159,7 @@ export function ControlPanel({
                 checked={audioConsent}
                 onChange={onToggleAudio}
                 className="accent-sky-500"
+                aria-label="Enable audio feedback"
               />
               Enable Audio Feedback
             </label>
@@ -198,12 +207,14 @@ export function ControlPanel({
             <div className="flex gap-2">
               <button
                 onClick={() => rewindTo(Math.max(0, snapshotsCount - 1))}
+                aria-label="Rewind to last snapshot"
                 className="flex-1 px-2 py-1.5 rounded-md bg-amber-100 dark:bg-amber-600/20 text-amber-700 dark:text-amber-400 text-xs font-medium hover:bg-amber-200 dark:hover:bg-amber-600/30 transition"
               >
                 Rewind
               </button>
               <button
                 onClick={exitRewind}
+                aria-label="Return to live simulation"
                 className="flex-1 px-2 py-1.5 rounded-md bg-emerald-100 dark:bg-emerald-600/20 text-emerald-700 dark:text-emerald-400 text-xs font-medium hover:bg-emerald-200 dark:hover:bg-emerald-600/30 transition"
               >
                 Live

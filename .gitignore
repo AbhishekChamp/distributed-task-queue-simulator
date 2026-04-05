@@ -26,3 +26,5 @@ dist-ssr
 SKILLS.md
 TASKLIST.md
 .tanstack
+*storybook.log
+storybook-static

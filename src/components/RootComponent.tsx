@@ -15,12 +15,20 @@ export function RootComponent() {
     <QueryClientProvider client={queryClient}>
       <Outlet />
       <Toaster
-        position="top-right"
+        position="top-center"
+        containerStyle={{
+          top: 16,
+          left: '50%',
+          right: 'auto',
+          transform: 'translateX(-50%)',
+          zIndex: 9999,
+        }}
         toastOptions={{
           style: {
             background: isDark ? '#1e293b' : '#ffffff',
             color: isDark ? '#e2e8f0' : '#1e293b',
             border: `1px solid ${isDark ? '#334155' : '#e2e8f0'}`,
+            maxWidth: 320,
           },
         }}
       />

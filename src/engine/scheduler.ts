@@ -5,7 +5,7 @@ import { processTask } from './worker'
 import { createTask } from './task'
 
 export class Scheduler {
-  private intervalId: number | null = null
+  private intervalId: ReturnType<typeof setInterval> | null = null
   private tasks: Map<string, Task>
   private workers: Worker[]
   private mainQueue: TaskQueue
