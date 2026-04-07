@@ -118,6 +118,42 @@ export function AboutPage() {
 
           <div>
             <h2 className="text-xl font-semibold text-slate-900 dark:text-slate-100 mb-2">
+              Lessons Learned
+            </h2>
+            <div className="space-y-3 text-slate-600 dark:text-slate-400 leading-relaxed">
+              <p>
+                <strong>Event-driven frontends are incredibly flexible.</strong> By modeling the UI
+                as a subscriber to an event stream (just like a real distributed backend), I could
+                add new visualizations, notifications, and metrics without touching the engine. The
+                engine emits events; the UI decides how to display them.
+              </p>
+              <p>
+                <strong>Web Workers are essential for simulation.</strong> Running the scheduler on
+                the main thread caused frame drops under load. Moving it to a worker solved this,
+                but required careful message-passing to avoid excessive re-renders.
+              </p>
+              <p>
+                <strong>Reference stability matters.</strong> A subtle bug occurred because{' '}
+                <code>useAudioFeedback</code> returned a new object every render. This destabilized
+                a <code>useEffect</code> that managed the Web Worker, causing infinite recreation.
+                Wrapping the return in <code>useMemo</code> fixed it.
+              </p>
+              <p>
+                <strong>Virtualization unlocks scale.</strong> Rendering 10,000 DOM rows is
+                impossible without virtualization. <code>@tanstack/react-virtual</code> made the
+                task table feel instant even at massive scale.
+              </p>
+              <p>
+                <strong>Accessibility is best done early.</strong> Adding ARIA labels, focus
+                management, and reduced-motion support during development was far easier than
+                retrofitting. The skip link and keyboard shortcuts also improved the experience for
+                power users.
+              </p>
+            </div>
+          </div>
+
+          <div>
+            <h2 className="text-xl font-semibold text-slate-900 dark:text-slate-100 mb-2">
               Open Source
             </h2>
             <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
