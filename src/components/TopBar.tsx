@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import { Link } from '@tanstack/react-router'
 import { Play, Pause, RotateCcw, Plus } from './icons'
 import { ThemeToggle } from './ThemeToggle'
@@ -11,6 +12,8 @@ interface TopBarProps {
   onToggleFullscreen?: () => void
   isFullscreen?: boolean
   onCopyUrl?: () => void
+  onRestartTour?: () => void
+  challengeButton?: ReactNode
 }
 
 export function TopBar({
@@ -22,6 +25,8 @@ export function TopBar({
   onToggleFullscreen,
   isFullscreen,
   onCopyUrl,
+  onRestartTour,
+  challengeButton,
 }: TopBarProps) {
   return (
     <header
@@ -80,6 +85,19 @@ export function TopBar({
         ))}
 
         <div className="w-px h-6 bg-slate-300 dark:bg-slate-700 mx-1" aria-hidden="true" />
+
+        {challengeButton}
+
+        {onRestartTour && (
+          <button
+            onClick={onRestartTour}
+            aria-label="Restart guided tour"
+            title="Restart guided tour"
+            className="px-2 py-1.5 rounded-md bg-sky-100 dark:bg-sky-600/20 text-sky-700 dark:text-sky-400 hover:bg-sky-200 dark:hover:bg-sky-600/30 transition text-sm"
+          >
+            ?
+          </button>
+        )}
 
         {onCopyUrl && (
           <button

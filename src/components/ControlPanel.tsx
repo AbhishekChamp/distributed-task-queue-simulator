@@ -1,5 +1,6 @@
 import type { SimulationConfig } from '../types'
 import { SimulationPresets } from './SimulationPresets'
+import { Tooltip } from './Tooltip'
 
 interface ControlPanelProps {
   config: SimulationConfig
@@ -58,99 +59,113 @@ export function ControlPanel({
         </h2>
 
         <div className="space-y-4">
-          <ControlRow label="Workers" value={`${config.workerCount}`}>
-            <input
-              type="range"
-              min={1}
-              max={20}
-              value={config.workerCount}
-              onChange={(e) => onChange({ workerCount: Number(e.target.value) })}
-              className="w-full accent-sky-500"
-              aria-label="Worker count"
-            />
-          </ControlRow>
+          <Tooltip content="Number of workers processing tasks from the queue.">
+            <ControlRow label="Workers" value={`${config.workerCount}`}>
+              <input
+                type="range"
+                min={1}
+                max={20}
+                value={config.workerCount}
+                onChange={(e) => onChange({ workerCount: Number(e.target.value) })}
+                className="w-full accent-sky-500"
+                aria-label="Worker count"
+              />
+            </ControlRow>
+          </Tooltip>
 
-          <ControlRow label="Failure Probability" value={`${config.failureProbability}%`}>
-            <input
-              type="range"
-              min={0}
-              max={100}
-              value={config.failureProbability}
-              onChange={(e) => onChange({ failureProbability: Number(e.target.value) })}
-              className="w-full accent-rose-500"
-              aria-label="Failure probability percent"
-            />
-          </ControlRow>
+          <Tooltip content="Chance (%) that a worker will fail while processing a task.">
+            <ControlRow label="Failure Probability" value={`${config.failureProbability}%`}>
+              <input
+                type="range"
+                min={0}
+                max={100}
+                value={config.failureProbability}
+                onChange={(e) => onChange({ failureProbability: Number(e.target.value) })}
+                className="w-full accent-rose-500"
+                aria-label="Failure probability percent"
+              />
+            </ControlRow>
+          </Tooltip>
 
-          <ControlRow label="Max Retries" value={`${config.maxRetries}`}>
-            <input
-              type="number"
-              min={0}
-              max={10}
-              value={config.maxRetries}
-              onChange={(e) => onChange({ maxRetries: Number(e.target.value) })}
-              className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded px-2 py-1 text-sm text-slate-800 dark:text-slate-200"
-              aria-label="Maximum retries"
-            />
-          </ControlRow>
+          <Tooltip content="How many times a failed task will be retried before moving to the DLQ.">
+            <ControlRow label="Max Retries" value={`${config.maxRetries}`}>
+              <input
+                type="number"
+                min={0}
+                max={10}
+                value={config.maxRetries}
+                onChange={(e) => onChange({ maxRetries: Number(e.target.value) })}
+                className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded px-2 py-1 text-sm text-slate-800 dark:text-slate-200"
+                aria-label="Maximum retries"
+              />
+            </ControlRow>
+          </Tooltip>
 
-          <ControlRow label="Simulation Speed" value={`${config.simulationSpeed}x`}>
-            <input
-              type="range"
-              min={1}
-              max={10}
-              step={0.5}
-              value={config.simulationSpeed}
-              onChange={(e) => onChange({ simulationSpeed: Number(e.target.value) })}
-              className="w-full accent-emerald-500"
-              aria-label="Simulation speed multiplier"
-            />
-          </ControlRow>
+          <Tooltip content="Multiplier for how fast simulated time progresses.">
+            <ControlRow label="Simulation Speed" value={`${config.simulationSpeed}x`}>
+              <input
+                type="range"
+                min={1}
+                max={10}
+                step={0.5}
+                value={config.simulationSpeed}
+                onChange={(e) => onChange({ simulationSpeed: Number(e.target.value) })}
+                className="w-full accent-emerald-500"
+                aria-label="Simulation speed multiplier"
+              />
+            </ControlRow>
+          </Tooltip>
 
-          <ControlRow label="Queue Capacity" value={`${config.maxQueueCapacity}`}>
-            <input
-              type="range"
-              min={10}
-              max={1000}
-              step={10}
-              value={config.maxQueueCapacity}
-              onChange={(e) => onChange({ maxQueueCapacity: Number(e.target.value) })}
-              className="w-full accent-violet-500"
-              aria-label="Maximum queue capacity"
-            />
-          </ControlRow>
+          <Tooltip content="Maximum number of tasks the main queue can hold before backpressure drops new tasks.">
+            <ControlRow label="Queue Capacity" value={`${config.maxQueueCapacity}`}>
+              <input
+                type="range"
+                min={10}
+                max={1000}
+                step={10}
+                value={config.maxQueueCapacity}
+                onChange={(e) => onChange({ maxQueueCapacity: Number(e.target.value) })}
+                className="w-full accent-violet-500"
+                aria-label="Maximum queue capacity"
+              />
+            </ControlRow>
+          </Tooltip>
 
-          <div className="space-y-1">
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-slate-600 dark:text-slate-400">Load Balancing</span>
+          <Tooltip content="How tasks are distributed across available workers.">
+            <div className="space-y-1">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-slate-600 dark:text-slate-400">Load Balancing</span>
+              </div>
+              <select
+                value={config.loadBalancingStrategy}
+                onChange={(e) =>
+                  onChange({
+                    loadBalancingStrategy: e.target
+                      .value as SimulationConfig['loadBalancingStrategy'],
+                  })
+                }
+                className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded px-2 py-1 text-sm text-slate-800 dark:text-slate-200"
+                aria-label="Load balancing strategy"
+              >
+                <option value="round-robin">Round Robin</option>
+                <option value="least-connections">Least Connections</option>
+                <option value="random">Random</option>
+              </select>
             </div>
-            <select
-              value={config.loadBalancingStrategy}
-              onChange={(e) =>
-                onChange({
-                  loadBalancingStrategy: e.target
-                    .value as SimulationConfig['loadBalancingStrategy'],
-                })
-              }
-              className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded px-2 py-1 text-sm text-slate-800 dark:text-slate-200"
-              aria-label="Load balancing strategy"
-            >
-              <option value="round-robin">Round Robin</option>
-              <option value="least-connections">Least Connections</option>
-              <option value="random">Random</option>
-            </select>
-          </div>
+          </Tooltip>
 
-          <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={config.enableCircuitBreaker}
-              onChange={(e) => onChange({ enableCircuitBreaker: e.target.checked })}
-              className="accent-sky-500"
-              aria-label="Enable circuit breaker"
-            />
-            Enable Circuit Breaker
-          </label>
+          <Tooltip content="When enabled, workers that fail 3 times in a row become unhealthy and pause processing for a cooldown period.">
+            <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={config.enableCircuitBreaker}
+                onChange={(e) => onChange({ enableCircuitBreaker: e.target.checked })}
+                className="accent-sky-500"
+                aria-label="Enable circuit breaker"
+              />
+              Enable Circuit Breaker
+            </label>
+          </Tooltip>
 
           {onToggleAudio && (
             <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400 cursor-pointer">

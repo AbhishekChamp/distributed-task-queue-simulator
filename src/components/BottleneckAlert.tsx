@@ -2,6 +2,7 @@ import type { BottleneckStage } from '../types'
 
 interface BottleneckAlertProps {
   stage: BottleneckStage
+  id?: string
 }
 
 const messages: Record<BottleneckStage, { text: string; color: string }> = {
@@ -27,10 +28,11 @@ const messages: Record<BottleneckStage, { text: string; color: string }> = {
   },
 }
 
-export function BottleneckAlert({ stage }: BottleneckAlertProps) {
+export function BottleneckAlert({ stage, id }: BottleneckAlertProps) {
   const msg = messages[stage]
   return (
     <div
+      id={id}
       role="status"
       aria-live="polite"
       aria-atomic="true"

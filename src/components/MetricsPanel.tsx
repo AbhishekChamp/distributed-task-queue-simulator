@@ -1,5 +1,6 @@
 import type { SimulationMetrics, MetricsHistoryPoint, WorkerUtilization } from '../types'
 import { Sparkline } from './Sparkline'
+import { Tooltip } from './Tooltip'
 
 interface MetricsPanelProps {
   metrics: SimulationMetrics
@@ -21,37 +22,92 @@ export function MetricsPanel({
     value: number | string
     color: string
     historyKey: keyof SimulationMetrics
+    tip: string
   }[] = [
-    { label: 'Queue Depth', value: metrics.queued, color: '#0ea5e9', historyKey: 'queued' },
-    { label: 'Processing', value: metrics.processing, color: '#f59e0b', historyKey: 'processing' },
+    {
+      label: 'Queue Depth',
+      value: metrics.queued,
+      color: '#0ea5e9',
+      historyKey: 'queued',
+      tip: 'Total tasks currently waiting in the main queue.',
+    },
+    {
+      label: 'Processing',
+      value: metrics.processing,
+      color: '#f59e0b',
+      historyKey: 'processing',
+      tip: 'Tasks currently being handled by workers.',
+    },
     {
       label: 'Active Workers',
       value: metrics.activeWorkers,
       color: '#10b981',
       historyKey: 'activeWorkers',
+      tip: 'Number of workers currently busy with a task.',
     },
     {
       label: 'Tasks / sec',
       value: metrics.tasksPerSecond,
       color: '#8b5cf6',
       historyKey: 'tasksPerSecond',
+      tip: 'Throughput: how many tasks were completed in the last second.',
     },
-    { label: 'Success', value: metrics.success, color: '#10b981', historyKey: 'success' },
-    { label: 'Failed', value: metrics.failed, color: '#f43f5e', historyKey: 'failed' },
-    { label: 'Retrying', value: metrics.retry, color: '#f59e0b', historyKey: 'retry' },
-    { label: 'DLQ', value: metrics.dead, color: '#64748b', historyKey: 'dead' },
+    {
+      label: 'Success',
+      value: metrics.success,
+      color: '#10b981',
+      historyKey: 'success',
+      tip: 'Total tasks completed successfully.',
+    },
+    {
+      label: 'Failed',
+      value: metrics.failed,
+      color: '#f43f5e',
+      historyKey: 'failed',
+      tip: 'Tasks that failed and may be retried.',
+    },
+    {
+      label: 'Retrying',
+      value: metrics.retry,
+      color: '#f59e0b',
+      historyKey: 'retry',
+      tip: 'Tasks currently waiting in the retry queue with backoff.',
+    },
+    {
+      label: 'DLQ',
+      value: metrics.dead,
+      color: '#64748b',
+      historyKey: 'dead',
+      tip: 'Dead Letter Queue: tasks that exhausted all retries.',
+    },
     {
       label: 'Failure Rate',
       value: `${metrics.failureRate}%`,
       color: '#f43f5e',
       historyKey: 'failureRate',
+      tip: 'Percentage of completed tasks that ended in failure or DLQ.',
     },
   ]
 
   const latencies = [
-    { label: 'p50 Latency', value: `${metrics.p50Latency}ms`, color: '#38bdf8' },
-    { label: 'p95 Latency', value: `${metrics.p95Latency}ms`, color: '#a855f7' },
-    { label: 'p99 Latency', value: `${metrics.p99Latency}ms`, color: '#f43f5e' },
+    {
+      label: 'p50 Latency',
+      value: `${metrics.p50Latency}ms`,
+      color: '#38bdf8',
+      tip: '50% of tasks finished within this time.',
+    },
+    {
+      label: 'p95 Latency',
+      value: `${metrics.p95Latency}ms`,
+      color: '#a855f7',
+      tip: '95% of tasks finished within this time.',
+    },
+    {
+      label: 'p99 Latency',
+      value: `${metrics.p99Latency}ms`,
+      color: '#f43f5e',
+      tip: '99% of tasks finished within this time.',
+    },
   ]
 
   return (
@@ -68,7 +124,11 @@ export function MetricsPanel({
               className="flex items-center justify-between rounded-md border border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-950/50 px-3 py-2"
             >
               <div className="flex flex-col">
-                <span className="text-sm text-slate-600 dark:text-slate-400">{item.label}</span>
+                <Tooltip content={item.tip}>
+                  <span className="text-sm text-slate-600 dark:text-slate-400 cursor-help underline decoration-dotted underline-offset-2">
+                    {item.label}
+                  </span>
+                </Tooltip>
                 <span className="font-mono text-lg font-semibold text-slate-800 dark:text-slate-100">
                   {item.value}
                 </span>
@@ -95,7 +155,11 @@ export function MetricsPanel({
               key={l.label}
               className="rounded-md border border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-950/50 px-2 py-2 text-center"
             >
-              <div className="text-[10px] text-slate-500 dark:text-slate-400">{l.label}</div>
+              <Tooltip content={l.tip}>
+                <div className="text-[10px] text-slate-500 dark:text-slate-400 cursor-help underline decoration-dotted underline-offset-2">
+                  {l.label}
+                </div>
+              </Tooltip>
               <div className="font-mono text-sm font-semibold" style={{ color: l.color }}>
                 {l.value}
               </div>
