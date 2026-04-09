@@ -1,15 +1,21 @@
-import type { Task } from '../types'
+import type { SimulationEvent, Task } from '../types'
 
 interface TaskDetailProps {
   task: Task
+  events?: SimulationEvent[]
 }
 
-export function TaskDetail({ task }: TaskDetailProps) {
-  const steps = [
-    { label: 'Created', time: task.createdAt, active: true },
-    { label: 'Started', time: task.startedAt, active: !!task.startedAt },
-    { label: 'Completed', time: task.completedAt, active: !!task.completedAt },
-  ]
+type TraceStep = {
+  label: string
+  time?: number
+  active: boolean
+  workerId?: string
+  message?: string
+  tone: 'neutral' | 'success' | 'warning' | 'error'
+}
+
+export function TaskDetail({ task, events = [] }: TaskDetailProps) {
+  const traceSteps: TraceStep[] = buildTrace(task, events)
 
   return (
     <div className="space-y-4">
@@ -46,29 +52,55 @@ export function TaskDetail({ task }: TaskDetailProps) {
             <div className="text-rose-700 dark:text-rose-300 text-sm">{task.error}</div>
           </div>
         )}
+        {task.parentId && (
+          <div className="col-span-2 rounded-md border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/50 px-3 py-2">
+            <div className="text-slate-500 dark:text-slate-500 text-xs">Parent Task</div>
+            <div className="font-mono text-slate-800 dark:text-slate-200">{task.parentId}</div>
+          </div>
+        )}
       </div>
 
       <div>
         <h4 className="text-xs font-semibold text-slate-500 dark:text-slate-500 mb-2">
-          Lifecycle Timeline
+          Lifecycle Trace
         </h4>
         <div className="relative pl-4">
           <div className="absolute left-1.5 top-1 bottom-1 w-px bg-slate-300 dark:bg-slate-700" />
           <div className="space-y-3">
-            {steps.map((step) => (
-              <div key={step.label} className="relative flex items-center gap-3">
-                <div
-                  className={`absolute -left-2.5 w-2.5 h-2.5 rounded-full border-2 ${step.active ? 'bg-sky-500 border-sky-500' : 'bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-600'}`}
-                />
-                <div
-                  className={`text-sm ${step.active ? 'text-slate-800 dark:text-slate-200' : 'text-slate-400 dark:text-slate-600'}`}
-                >
-                  {step.label}
+            {traceSteps.map((step, idx) => (
+              <div key={`${step.label}-${idx}`} className="relative flex flex-col gap-0.5">
+                <div className="flex items-center gap-3">
+                  <div
+                    className={`absolute -left-2.5 w-2.5 h-2.5 rounded-full border-2 ${
+                      step.active
+                        ? toneClasses(step.tone)
+                        : 'bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-600'
+                    }`}
+                  />
+                  <div
+                    className={`text-sm ${
+                      step.active
+                        ? 'text-slate-800 dark:text-slate-200'
+                        : 'text-slate-400 dark:text-slate-600'
+                    }`}
+                  >
+                    {step.label}
+                  </div>
+                  {step.time && (
+                    <div className="text-xs font-mono text-slate-500 dark:text-slate-400">
+                      {new Date(step.time).toLocaleTimeString()}.
+                      {String(new Date(step.time).getMilliseconds()).padStart(3, '0')}
+                    </div>
+                  )}
                 </div>
-                {step.time && (
-                  <div className="text-xs font-mono text-slate-500 dark:text-slate-400">
-                    {new Date(step.time).toLocaleTimeString()}.
-                    {String(new Date(step.time).getMilliseconds()).padStart(3, '0')}
+                {step.workerId && (
+                  <div className="text-xs text-slate-500 dark:text-slate-400 pl-3">
+                    Worker: <span className="font-mono">{step.workerId}</span>
+                  </div>
+                )}
+                {step.message && (
+                  <div className="text-xs text-slate-500 dark:text-slate-400 pl-3">
+                    {step.message}
                   </div>
                 )}
               </div>
@@ -78,4 +110,105 @@ export function TaskDetail({ task }: TaskDetailProps) {
       </div>
     </div>
   )
+}
+
+function toneClasses(tone: TraceStep['tone']): string {
+  switch (tone) {
+    case 'success':
+      return 'bg-emerald-500 border-emerald-500'
+    case 'warning':
+      return 'bg-amber-500 border-amber-500'
+    case 'error':
+      return 'bg-rose-500 border-rose-500'
+    default:
+      return 'bg-sky-500 border-sky-500'
+  }
+}
+
+function buildTrace(task: Task, events: SimulationEvent[]): TraceStep[] {
+  const taskEvents = events
+    .filter((e) => e.taskId === task.id)
+    .sort((a, b) => a.timestamp - b.timestamp)
+
+  const trace: TraceStep[] = [
+    { label: 'Created', time: task.createdAt, active: true, tone: 'neutral' },
+  ]
+
+  for (const ev of taskEvents) {
+    switch (ev.type) {
+      case 'TASK_STARTED':
+        trace.push({
+          label: 'Started',
+          time: ev.timestamp,
+          active: true,
+          workerId: ev.workerId,
+          tone: 'neutral',
+        })
+        break
+      case 'TASK_COMPLETED':
+        trace.push({
+          label: 'Completed',
+          time: ev.timestamp,
+          active: true,
+          workerId: ev.workerId,
+          tone: 'success',
+        })
+        break
+      case 'TASK_FAILED':
+        trace.push({
+          label: 'Failed',
+          time: ev.timestamp,
+          active: true,
+          workerId: ev.workerId,
+          message: ev.message,
+          tone: 'error',
+        })
+        break
+      case 'TASK_RETRIED':
+        trace.push({
+          label: 'Retried',
+          time: ev.timestamp,
+          active: true,
+          workerId: ev.workerId,
+          message: ev.message,
+          tone: 'warning',
+        })
+        break
+      case 'TASK_MOVED_TO_DLQ':
+        trace.push({
+          label: 'Moved to DLQ',
+          time: ev.timestamp,
+          active: true,
+          workerId: ev.workerId,
+          message: ev.message,
+          tone: 'error',
+        })
+        break
+      case 'BATCH_SPAWNED':
+        trace.push({
+          label: 'Batch Spawned',
+          time: ev.timestamp,
+          active: true,
+          message: ev.message,
+          tone: 'neutral',
+        })
+        break
+    }
+  }
+
+  // If no events enriched the trace beyond Created, fall back to field-based steps
+  if (trace.length === 1) {
+    trace.push(
+      { label: 'Started', time: task.startedAt, active: !!task.startedAt, tone: 'neutral' },
+      {
+        label:
+          task.status === 'success' ? 'Completed' : task.status === 'dead' ? 'Dead' : 'Completed',
+        time: task.completedAt,
+        active: !!task.completedAt,
+        tone: task.status === 'success' ? 'success' : task.status === 'dead' ? 'error' : 'neutral',
+      },
+    )
+  }
+
+  return trace
 }

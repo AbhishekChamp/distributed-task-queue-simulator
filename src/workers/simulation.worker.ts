@@ -50,5 +50,10 @@ self.onmessage = (e: MessageEvent) => {
       broadcastState()
       break
     }
+    case 'STEP': {
+      engine?.step()
+      broadcastState()
+      break
+    }
   }
 }

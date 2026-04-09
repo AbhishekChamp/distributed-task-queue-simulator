@@ -134,6 +134,10 @@ export function useSimulation() {
     workerRef.current?.postMessage({ type: 'PAUSE' })
   }, [audio])
 
+  const step = useCallback(() => {
+    workerRef.current?.postMessage({ type: 'STEP' })
+  }, [])
+
   const reset = useCallback(() => {
     audio.playClick()
     snapshotsRef.current = []
@@ -216,6 +220,7 @@ export function useSimulation() {
     state: useSimulationStore(),
     start,
     pause,
+    step,
     reset,
     addTasks,
     addBatch,

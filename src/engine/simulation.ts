@@ -115,6 +115,12 @@ export class SimulationEngine {
     this.scheduler.stop()
   }
 
+  step(): void {
+    if (!this.isRunning) {
+      this.scheduler.step()
+    }
+  }
+
   reset(): void {
     this.pause()
     this.tasks.clear()

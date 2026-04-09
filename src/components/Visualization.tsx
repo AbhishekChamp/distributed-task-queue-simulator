@@ -57,7 +57,7 @@ export function Visualization({
           ringColor={isBackpressure ? 'ring-rose-500' : undefined}
           aria-label={`Producer stage with ${tasks.size} tasks`}
         />
-        <Arrow aria-label="Pipeline arrow" />
+        <FlowArrow aria-label="Pipeline arrow" animated={!reducedMotion} />
         <StageBox
           label="Main Queue"
           count={mainQueue.length}
@@ -65,14 +65,14 @@ export function Visualization({
           pulse={isOverloaded}
           aria-label={`Main queue with ${mainQueue.length} tasks`}
         />
-        <Arrow aria-label="Pipeline arrow" />
+        <FlowArrow aria-label="Pipeline arrow" animated={!reducedMotion} />
         <StageBox
           label="Workers"
           count={workers.filter((w) => w.busy).length}
           color="bg-amber-600"
           aria-label={`Workers stage with ${workers.filter((w) => w.busy).length} active workers`}
         />
-        <Arrow aria-label="Pipeline arrow" />
+        <FlowArrow aria-label="Pipeline arrow" animated={!reducedMotion} />
         <StageBox
           label="Results"
           count={
@@ -252,14 +252,43 @@ function StageBox({
   )
 }
 
-function Arrow({ 'aria-label': ariaLabel }: { 'aria-label'?: string }) {
+function FlowArrow({
+  'aria-label': ariaLabel,
+  animated,
+}: {
+  'aria-label'?: string
+  animated?: boolean
+}) {
   return (
     <div
-      className="text-slate-400 dark:text-slate-600 text-xl"
+      className="w-12 h-6 flex items-center justify-center"
       aria-label={ariaLabel}
       aria-hidden="true"
     >
-      →
+      <svg width="48" height="20" viewBox="0 0 48 20" className="overflow-visible">
+        <defs>
+          <marker id="arrowhead" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+            <polygon points="0 0, 6 3, 0 6" className="fill-slate-400 dark:fill-slate-600" />
+          </marker>
+        </defs>
+        <path
+          d="M 0 10 Q 24 6 44 10"
+          className={`stroke-slate-400 dark:stroke-slate-600 fill-none ${animated ? 'flow-arrow' : ''}`}
+          strokeWidth="2"
+          markerEnd="url(#arrowhead)"
+          strokeDasharray={animated ? '6 4' : undefined}
+        />
+      </svg>
+      <style>{`
+        @keyframes flowDash {
+          to {
+            stroke-dashoffset: -20;
+          }
+        }
+        .flow-arrow {
+          animation: flowDash 1s linear infinite;
+        }
+      `}</style>
     </div>
   )
 }

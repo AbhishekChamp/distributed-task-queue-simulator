@@ -11,6 +11,7 @@ import { useGuidedTour } from '../hooks/useGuidedTour'
 import { GuidedTourOverlay } from './GuidedTour'
 import { useChallenges } from '../hooks/useChallenges'
 import { ChallengesButton, ChallengesPanel } from './ScenarioChallenges'
+import { StepThroughDebugger } from './StepThroughDebugger'
 import toast from 'react-hot-toast'
 
 const MetricsPanel = lazy(() => import('./MetricsPanel').then((m) => ({ default: m.MetricsPanel })))
@@ -36,6 +37,7 @@ export function SimulatorPage() {
     state,
     start,
     pause,
+    step,
     reset,
     addTasks,
     addBatch,
@@ -51,7 +53,7 @@ export function SimulatorPage() {
     audioConsent,
     setAudioConsent,
   } = useSimulation()
-  const [bottomTab, setBottomTab] = useState<'tasks' | 'events'>('tasks')
+  const [bottomTab, setBottomTab] = useState<'tasks' | 'events' | 'debug'>('tasks')
   const [showDLQ, setShowDLQ] = useState(false)
   const { isFullscreen, toggle: toggleFullscreen } = useFullscreen()
 
@@ -192,11 +194,21 @@ export function SimulatorPage() {
                 onClick={() => setBottomTab('events')}
                 className={`px-3 py-2 text-xs font-semibold uppercase tracking-wider transition ${
                   bottomTab === 'events'
-                    ? 'text-sky-600 dark:text-sky-400 border-b-2 border-sky-600 dark:border-slate-400'
+                    ? 'text-sky-600 dark:text-sky-400 border-b-2 border-sky-600 dark:border-sky-400'
                     : 'text-slate-500 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
                 }`}
               >
                 Event Log
+              </button>
+              <button
+                onClick={() => setBottomTab('debug')}
+                className={`px-3 py-2 text-xs font-semibold uppercase tracking-wider transition ${
+                  bottomTab === 'debug'
+                    ? 'text-sky-600 dark:text-sky-400 border-b-2 border-sky-600 dark:border-sky-400'
+                    : 'text-slate-500 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                }`}
+              >
+                Debug
               </button>
               <div className="flex-1" />
               <button
@@ -215,9 +227,11 @@ export function SimulatorPage() {
             >
               <Suspense fallback={<PanelSkeleton />}>
                 {bottomTab === 'tasks' ? (
-                  <TaskTable tasks={state.tasks} />
-                ) : (
+                  <TaskTable tasks={state.tasks} events={state.events} />
+                ) : bottomTab === 'events' ? (
                   <EventLog events={state.events} />
+                ) : (
+                  <StepThroughDebugger isRunning={state.isRunning} onStep={step} />
                 )}
               </Suspense>
             </div>

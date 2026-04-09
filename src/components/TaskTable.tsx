@@ -1,16 +1,17 @@
 import { useState, useMemo, useRef, useEffect } from 'react'
 import { useVirtualizer } from '@tanstack/react-virtual'
-import type { Task, TaskStatus } from '../types'
+import type { SimulationEvent, Task, TaskStatus } from '../types'
 import { TaskDetail } from './TaskDetail'
 import { Filter, X } from './icons'
 
 interface TaskTableProps {
   tasks: Map<string, Task>
+  events?: SimulationEvent[]
 }
 
 const statusOptions: TaskStatus[] = ['queued', 'processing', 'success', 'failed', 'retry', 'dead']
 
-export function TaskTable({ tasks }: TaskTableProps) {
+export function TaskTable({ tasks, events = [] }: TaskTableProps) {
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
   const [filter, setFilter] = useState<TaskStatus | 'all'>('all')
   const [showFailedOnly, setShowFailedOnly] = useState(false)
@@ -169,7 +170,7 @@ export function TaskTable({ tasks }: TaskTableProps) {
               </button>
             </div>
             <div className="p-4">
-              <TaskDetail task={selectedTask} />
+              <TaskDetail task={selectedTask} events={events} />
             </div>
           </div>
         </div>

@@ -47,6 +47,10 @@ export class Scheduler {
     }
   }
 
+  step(): void {
+    this.tick()
+  }
+
   private tick(): void {
     this.recoverWorkers()
     this.processRetryQueue()
