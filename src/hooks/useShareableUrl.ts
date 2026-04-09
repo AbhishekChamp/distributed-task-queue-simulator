@@ -11,6 +11,10 @@ function serializeConfig(config: SimulationConfig): string {
   params.set('mc', String(config.maxQueueCapacity))
   params.set('lb', config.loadBalancingStrategy)
   params.set('cb', config.enableCircuitBreaker ? '1' : '0')
+  params.set('mt', String(config.maxTasksPerSecondPerWorker))
+  params.set('dd', config.durationDistribution)
+  params.set('as', config.enableAutoScaling ? '1' : '0')
+  params.set('at', String(config.autoScalingQueueThreshold))
   return params.toString()
 }
 
@@ -35,6 +39,14 @@ export function readConfigFromUrl(): Partial<SimulationConfig> | undefined {
   if (lb) result.loadBalancingStrategy = lb as SimulationConfig['loadBalancingStrategy']
   const cb = params.get('cb')
   if (cb) result.enableCircuitBreaker = cb === '1'
+  const mt = params.get('mt')
+  if (mt) result.maxTasksPerSecondPerWorker = Number(mt)
+  const dd = params.get('dd')
+  if (dd) result.durationDistribution = dd as SimulationConfig['durationDistribution']
+  const as = params.get('as')
+  if (as) result.enableAutoScaling = as === '1'
+  const at = params.get('at')
+  if (at) result.autoScalingQueueThreshold = Number(at)
   return result
 }
 

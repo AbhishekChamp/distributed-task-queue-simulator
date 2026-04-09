@@ -61,12 +61,12 @@ export function ControlPanel({
 
         <div className="space-y-4">
           <Tooltip content="Number of workers processing tasks from the queue.">
-            <ControlRow label="Workers" value={`${config.workerCount}`}>
+            <ControlRow label="Workers" value={`${config.workerCount ?? 4}`}>
               <input
                 type="range"
                 min={1}
                 max={20}
-                value={config.workerCount}
+                value={config.workerCount ?? 4}
                 onChange={(e) => onChange({ workerCount: Number(e.target.value) })}
                 className="w-full accent-sky-500"
                 aria-label="Worker count"
@@ -75,12 +75,12 @@ export function ControlPanel({
           </Tooltip>
 
           <Tooltip content="Chance (%) that a worker will fail while processing a task.">
-            <ControlRow label="Failure Probability" value={`${config.failureProbability}%`}>
+            <ControlRow label="Failure Probability" value={`${config.failureProbability ?? 10}%`}>
               <input
                 type="range"
                 min={0}
                 max={100}
-                value={config.failureProbability}
+                value={config.failureProbability ?? 10}
                 onChange={(e) => onChange({ failureProbability: Number(e.target.value) })}
                 className="w-full accent-rose-500"
                 aria-label="Failure probability percent"
@@ -89,12 +89,12 @@ export function ControlPanel({
           </Tooltip>
 
           <Tooltip content="How many times a failed task will be retried before moving to the DLQ.">
-            <ControlRow label="Max Retries" value={`${config.maxRetries}`}>
+            <ControlRow label="Max Retries" value={`${config.maxRetries ?? 3}`}>
               <input
                 type="number"
                 min={0}
                 max={10}
-                value={config.maxRetries}
+                value={config.maxRetries ?? 3}
                 onChange={(e) => onChange({ maxRetries: Number(e.target.value) })}
                 className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded px-2 py-1 text-sm text-slate-800 dark:text-slate-200"
                 aria-label="Maximum retries"
@@ -103,13 +103,13 @@ export function ControlPanel({
           </Tooltip>
 
           <Tooltip content="Multiplier for how fast simulated time progresses.">
-            <ControlRow label="Simulation Speed" value={`${config.simulationSpeed}x`}>
+            <ControlRow label="Simulation Speed" value={`${config.simulationSpeed ?? 1}x`}>
               <input
                 type="range"
                 min={1}
                 max={10}
                 step={0.5}
-                value={config.simulationSpeed}
+                value={config.simulationSpeed ?? 1}
                 onChange={(e) => onChange({ simulationSpeed: Number(e.target.value) })}
                 className="w-full accent-emerald-500"
                 aria-label="Simulation speed multiplier"
@@ -118,13 +118,13 @@ export function ControlPanel({
           </Tooltip>
 
           <Tooltip content="Maximum number of tasks the main queue can hold before backpressure drops new tasks.">
-            <ControlRow label="Queue Capacity" value={`${config.maxQueueCapacity}`}>
+            <ControlRow label="Queue Capacity" value={`${config.maxQueueCapacity ?? 200}`}>
               <input
                 type="range"
                 min={10}
                 max={1000}
                 step={10}
-                value={config.maxQueueCapacity}
+                value={config.maxQueueCapacity ?? 200}
                 onChange={(e) => onChange({ maxQueueCapacity: Number(e.target.value) })}
                 className="w-full accent-violet-500"
                 aria-label="Maximum queue capacity"
@@ -138,7 +138,7 @@ export function ControlPanel({
                 <span className="text-slate-600 dark:text-slate-400">Load Balancing</span>
               </div>
               <select
-                value={config.loadBalancingStrategy}
+                value={config.loadBalancingStrategy ?? 'round-robin'}
                 onChange={(e) =>
                   onChange({
                     loadBalancingStrategy: e.target
@@ -159,7 +159,7 @@ export function ControlPanel({
             <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400 cursor-pointer">
               <input
                 type="checkbox"
-                checked={config.enableCircuitBreaker}
+                checked={config.enableCircuitBreaker ?? true}
                 onChange={(e) => onChange({ enableCircuitBreaker: e.target.checked })}
                 className="accent-sky-500"
                 aria-label="Enable circuit breaker"
@@ -169,13 +169,16 @@ export function ControlPanel({
           </Tooltip>
 
           <Tooltip content="Maximum tasks a worker can process per second. 0 means unlimited.">
-            <ControlRow label="Max TPS / Worker" value={`${config.maxTasksPerSecondPerWorker}`}>
+            <ControlRow
+              label="Max TPS / Worker"
+              value={`${config.maxTasksPerSecondPerWorker ?? 0}`}
+            >
               <input
                 type="range"
                 min={0}
                 max={20}
                 step={1}
-                value={config.maxTasksPerSecondPerWorker}
+                value={config.maxTasksPerSecondPerWorker ?? 0}
                 onChange={(e) => onChange({ maxTasksPerSecondPerWorker: Number(e.target.value) })}
                 className="w-full accent-amber-500"
                 aria-label="Max tasks per second per worker"
@@ -189,7 +192,7 @@ export function ControlPanel({
                 <span className="text-slate-600 dark:text-slate-400">Duration Distribution</span>
               </div>
               <select
-                value={config.durationDistribution}
+                value={config.durationDistribution ?? 'uniform'}
                 onChange={(e) =>
                   onChange({
                     durationDistribution: e.target
@@ -211,7 +214,7 @@ export function ControlPanel({
             <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400 cursor-pointer">
               <input
                 type="checkbox"
-                checked={config.enableAutoScaling}
+                checked={config.enableAutoScaling ?? false}
                 onChange={(e) => onChange({ enableAutoScaling: e.target.checked })}
                 className="accent-sky-500"
                 aria-label="Enable auto-scaling"
@@ -222,13 +225,16 @@ export function ControlPanel({
 
           {config.enableAutoScaling && (
             <Tooltip content="Queue depth threshold that triggers auto-scaling up or down.">
-              <ControlRow label="Scale Threshold" value={`${config.autoScalingQueueThreshold}`}>
+              <ControlRow
+                label="Scale Threshold"
+                value={`${config.autoScalingQueueThreshold ?? 50}`}
+              >
                 <input
                   type="range"
                   min={5}
                   max={200}
                   step={5}
-                  value={config.autoScalingQueueThreshold}
+                  value={config.autoScalingQueueThreshold ?? 50}
                   onChange={(e) => onChange({ autoScalingQueueThreshold: Number(e.target.value) })}
                   className="w-full accent-emerald-500"
                   aria-label="Auto-scaling queue threshold"
@@ -241,7 +247,7 @@ export function ControlPanel({
             <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400 cursor-pointer">
               <input
                 type="checkbox"
-                checked={audioConsent}
+                checked={audioConsent ?? false}
                 onChange={onToggleAudio}
                 className="accent-sky-500"
                 aria-label="Enable audio feedback"
