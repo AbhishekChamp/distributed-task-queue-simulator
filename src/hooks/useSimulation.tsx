@@ -29,6 +29,7 @@ function saveConfig(config: SimulationConfig): void {
 export function useSimulation() {
   const workerRef = useRef<Worker | null>(null)
   const snapshotsRef = useRef<SimulationState[]>([])
+  const [snapshots, setSnapshots] = useState<SimulationState[]>([])
   const [snapshotsCount, setSnapshotsCount] = useState(0)
   const [isRewind, setIsRewind] = useState(false)
   const [showDLQFromToast, setShowDLQFromToast] = useState(false)
@@ -104,6 +105,7 @@ export function useSimulation() {
             snapshotsRef.current.shift()
           }
           setSnapshotsCount(snapshotsRef.current.length)
+          setSnapshots(snapshotsRef.current)
           setSimulationState(state)
           saveConfig(state.config)
         }
@@ -141,6 +143,7 @@ export function useSimulation() {
   const reset = useCallback(() => {
     audio.playClick()
     snapshotsRef.current = []
+    setSnapshots([])
     setSnapshotsCount(0)
     setIsRewind(false)
     workerRef.current?.postMessage({ type: 'RESET' })
@@ -174,6 +177,8 @@ export function useSimulation() {
       setSimulationState({ ...snapshot, isRunning: false })
     }
   }, [])
+
+  // snapshots is kept in state to avoid ref-access-during-render lint rule
 
   const exitRewind = useCallback(() => {
     setIsRewind(false)
@@ -231,6 +236,7 @@ export function useSimulation() {
     isRewind,
     exportState,
     importState,
+    snapshots,
     showDLQFromToast,
     setShowDLQFromToast,
     audioConsent: audio.getConsent(),

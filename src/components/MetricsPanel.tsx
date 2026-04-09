@@ -1,11 +1,30 @@
-import type { SimulationMetrics, MetricsHistoryPoint, WorkerUtilization } from '../types'
+import { useState, useCallback } from 'react'
+import type {
+  SimulationMetrics,
+  MetricsHistoryPoint,
+  WorkerUtilization,
+  SimulationState,
+  SimulationEvent,
+  Task,
+} from '../types'
 import { Sparkline } from './Sparkline'
 import { Tooltip } from './Tooltip'
+import {
+  downloadCSV,
+  buildTaskExportData,
+  buildMetricsHistoryCSV,
+  buildEventsCSV,
+} from '../lib/csvExport'
+import { saveSession, loadSessions, deleteSession } from '../lib/indexeddb'
+import { SessionReplay } from './SessionReplay'
 
 interface MetricsPanelProps {
   metrics: SimulationMetrics
   metricsHistory: MetricsHistoryPoint[]
   workerUtilization: WorkerUtilization[]
+  tasks: Map<string, Task>
+  events: SimulationEvent[]
+  snapshots: SimulationState[]
   onExport: () => void
   onImport: (file: File) => void
 }
@@ -14,9 +33,47 @@ export function MetricsPanel({
   metrics,
   metricsHistory,
   workerUtilization,
+  tasks,
+  events,
+  snapshots,
   onExport,
   onImport,
 }: MetricsPanelProps) {
+  const [sessions, setSessions] = useState<{ id: string; name: string; createdAt: number }[]>([])
+  const [showReplay, setShowReplay] = useState(false)
+
+  const refreshSessions = useCallback(async () => {
+    const list = await loadSessions()
+    setSessions(list.map((s) => ({ id: s.id, name: s.name, createdAt: s.createdAt })))
+  }, [])
+
+  const handleSaveSession = async () => {
+    const name = `Session ${new Date().toLocaleString()}`
+    await saveSession(name, snapshots, events)
+    refreshSessions()
+  }
+
+  const handleDeleteSession = async (id: string) => {
+    await deleteSession(id)
+    refreshSessions()
+  }
+
+  const handleExportTasksCSV = () => {
+    const data = buildTaskExportData(tasks)
+    const csv = exportTasksAsCSV(data)
+    if (csv) downloadCSV(`tasks-${Date.now()}.csv`, csv)
+  }
+
+  const handleExportMetricsCSV = () => {
+    const csv = buildMetricsHistoryCSV(metricsHistory)
+    if (csv) downloadCSV(`metrics-${Date.now()}.csv`, csv)
+  }
+
+  const handleExportEventsCSV = () => {
+    const csv = buildEventsCSV(events)
+    if (csv) downloadCSV(`events-${Date.now()}.csv`, csv)
+  }
+
   const items: {
     label: string
     value: number | string
@@ -216,17 +273,39 @@ export function MetricsPanel({
         </div>
       )}
 
-      <div className="pt-4 border-t border-slate-200 dark:border-slate-800 flex gap-2">
-        <button
-          onClick={onExport}
-          aria-label="Export simulation state as JSON"
-          className="flex-1 px-2 py-1.5 rounded-md bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-medium hover:bg-slate-300 dark:hover:bg-slate-700 transition"
-        >
-          Export State
-        </button>
+      <div className="pt-4 border-t border-slate-200 dark:border-slate-800 space-y-2">
+        <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-500">
+          Export
+        </h3>
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            onClick={handleExportTasksCSV}
+            className="px-2 py-1.5 rounded-md bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-medium hover:bg-slate-300 dark:hover:bg-slate-700 transition"
+          >
+            Tasks CSV
+          </button>
+          <button
+            onClick={handleExportMetricsCSV}
+            className="px-2 py-1.5 rounded-md bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-medium hover:bg-slate-300 dark:hover:bg-slate-700 transition"
+          >
+            Metrics CSV
+          </button>
+          <button
+            onClick={handleExportEventsCSV}
+            className="px-2 py-1.5 rounded-md bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-medium hover:bg-slate-300 dark:hover:bg-slate-700 transition"
+          >
+            Events CSV
+          </button>
+          <button
+            onClick={onExport}
+            className="px-2 py-1.5 rounded-md bg-sky-100 dark:bg-sky-600/20 text-sky-700 dark:text-sky-400 text-xs font-medium hover:bg-sky-200 dark:hover:bg-sky-600/30 transition"
+          >
+            JSON State
+          </button>
+        </div>
         <label
           aria-label="Import simulation state from JSON file"
-          className="flex-1 px-2 py-1.5 rounded-md bg-sky-100 dark:bg-sky-600/20 text-sky-700 dark:text-sky-400 text-xs font-medium hover:bg-sky-200 dark:hover:bg-sky-600/30 transition text-center cursor-pointer"
+          className="block w-full px-2 py-1.5 rounded-md bg-violet-100 dark:bg-violet-600/20 text-violet-700 dark:text-violet-400 text-xs font-medium hover:bg-violet-200 dark:hover:bg-violet-600/30 transition text-center cursor-pointer"
         >
           Import State
           <input
@@ -242,6 +321,80 @@ export function MetricsPanel({
           />
         </label>
       </div>
+
+      <div className="pt-4 border-t border-slate-200 dark:border-slate-800 space-y-2">
+        <div className="flex items-center justify-between">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-500">
+            Session Persistence
+          </h3>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={refreshSessions}
+              className="px-2 py-1 rounded-md bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-medium hover:bg-slate-300 dark:hover:bg-slate-700 transition"
+            >
+              Load
+            </button>
+            <button
+              onClick={handleSaveSession}
+              className="px-2 py-1 rounded-md bg-emerald-100 dark:bg-emerald-600/20 text-emerald-700 dark:text-emerald-400 text-xs font-medium hover:bg-emerald-200 dark:hover:bg-emerald-600/30 transition"
+            >
+              Save
+            </button>
+          </div>
+        </div>
+        {sessions.length > 0 && (
+          <div className="space-y-1 max-h-32 overflow-auto">
+            {sessions.map((s) => (
+              <div
+                key={s.id}
+                className="flex items-center justify-between rounded-md border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/50 px-2 py-1"
+              >
+                <span className="text-xs text-slate-600 dark:text-slate-400 truncate">
+                  {s.name}
+                </span>
+                <button
+                  onClick={() => handleDeleteSession(s.id)}
+                  className="text-[10px] text-rose-600 hover:underline"
+                >
+                  Delete
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {snapshots.length > 0 && (
+        <div className="pt-2">
+          <button
+            onClick={() => setShowReplay(true)}
+            className="w-full px-2 py-1.5 rounded-md bg-amber-100 dark:bg-amber-600/20 text-amber-700 dark:text-amber-400 text-xs font-medium hover:bg-amber-200 dark:hover:bg-amber-600/30 transition"
+          >
+            Replay Session ({snapshots.length} frames)
+          </button>
+        </div>
+      )}
+
+      {showReplay && <SessionReplay snapshots={snapshots} onClose={() => setShowReplay(false)} />}
     </div>
   )
+}
+
+function exportTasksAsCSV(tasks: Map<string, Record<string, unknown>>): string {
+  const rows = Array.from(tasks.values())
+  if (rows.length === 0) return ''
+  const headers = Object.keys(rows[0])
+  const csvRows = [
+    headers.join(','),
+    ...rows.map((row) =>
+      headers
+        .map((h) => {
+          const val = row[h]
+          const str = val == null ? '' : String(val)
+          return `"${str.replace(/"/g, '""')}"`
+        })
+        .join(','),
+    ),
+  ]
+  return csvRows.join('\n')
 }

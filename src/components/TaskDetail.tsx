@@ -60,6 +60,28 @@ export function TaskDetail({ task, events = [] }: TaskDetailProps) {
         )}
       </div>
 
+      {task.childIds && task.childIds.length > 0 && (
+        <div>
+          <h4 className="text-xs font-semibold text-slate-500 dark:text-slate-500 mb-2">
+            Dependency Tree (Sub-tasks)
+          </h4>
+          <div className="rounded-md border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/50 p-3">
+            <div className="flex flex-wrap gap-2">
+              {task.childIds.map((childId) => (
+                <div
+                  key={childId}
+                  className="px-2 py-1 rounded bg-violet-100 dark:bg-violet-600/20 text-violet-700 dark:text-violet-400 text-xs font-mono"
+                >
+                  {childId.slice(-12)}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div></div>
+
       <div>
         <h4 className="text-xs font-semibold text-slate-500 dark:text-slate-500 mb-2">
           Lifecycle Trace

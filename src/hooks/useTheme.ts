@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 
-type Theme = 'light' | 'dark' | 'system'
+type Theme = 'light' | 'dark' | 'system' | 'contrast'
 
 const STORAGE_KEY = 'dtq-theme'
 
@@ -22,8 +22,11 @@ export function useTheme() {
     const systemDark = window.matchMedia('(prefers-color-scheme: dark)')
 
     const apply = () => {
+      root.classList.remove('contrast')
       if (theme === 'system') {
         root.classList.toggle('dark', systemDark.matches)
+      } else if (theme === 'contrast') {
+        root.classList.add('dark', 'contrast')
       } else {
         root.classList.toggle('dark', theme === 'dark')
       }

@@ -1,7 +1,7 @@
 import type { Task, Worker, SimulationConfig, SimulationEvent } from '../types'
 import { EventBus } from './eventBus'
 import { TaskQueue } from './queue'
-import { processTask } from './worker'
+import { processTask, createWorker } from './worker'
 import { createTask } from './task'
 
 export class Scheduler {

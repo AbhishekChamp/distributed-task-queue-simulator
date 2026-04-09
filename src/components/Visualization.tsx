@@ -48,9 +48,13 @@ export function Visualization({
         Pipeline
       </h2>
 
-      <div className="flex items-center gap-4" aria-label="Simulation pipeline overview">
+      <div
+        className="flex flex-wrap items-center gap-2 lg:gap-4"
+        aria-label="Simulation pipeline overview"
+      >
         <StageBox
-          label="Producer"
+          label="Prod"
+          lgLabel="Producer"
           count={tasks.size}
           color="bg-violet-600"
           pulse={isBackpressure}
@@ -59,7 +63,8 @@ export function Visualization({
         />
         <FlowArrow aria-label="Pipeline arrow" animated={!reducedMotion} />
         <StageBox
-          label="Main Queue"
+          label="Queue"
+          lgLabel="Main Queue"
           count={mainQueue.length}
           color={isOverloaded ? 'bg-rose-600' : 'bg-sky-600'}
           pulse={isOverloaded}
@@ -67,14 +72,16 @@ export function Visualization({
         />
         <FlowArrow aria-label="Pipeline arrow" animated={!reducedMotion} />
         <StageBox
-          label="Workers"
+          label="Work"
+          lgLabel="Workers"
           count={workers.filter((w) => w.busy).length}
           color="bg-amber-600"
           aria-label={`Workers stage with ${workers.filter((w) => w.busy).length} active workers`}
         />
         <FlowArrow aria-label="Pipeline arrow" animated={!reducedMotion} />
         <StageBox
-          label="Results"
+          label="Done"
+          lgLabel="Results"
           count={
             tasks.size > 0
               ? Math.max(
@@ -125,7 +132,7 @@ export function Visualization({
         </div>
       )}
 
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4">
         <QueueCard
           title="Main Queue"
           count={mainQueue.length}
@@ -147,7 +154,7 @@ export function Visualization({
       </div>
 
       <div className="space-y-2">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
           <h3 className="text-xs font-semibold text-slate-500 dark:text-slate-500">Worker Pool</h3>
           <div className="flex items-center gap-2 text-xs text-slate-400 dark:text-slate-500">
             <span>⚡ Fast</span>
@@ -225,6 +232,7 @@ export function Visualization({
 
 function StageBox({
   label,
+  lgLabel,
   count,
   color,
   pulse = false,
@@ -232,6 +240,7 @@ function StageBox({
   'aria-label': ariaLabel,
 }: {
   label: string
+  lgLabel?: string
   count: number
   color: string
   pulse?: boolean
@@ -243,11 +252,14 @@ function StageBox({
       <div
         aria-label={ariaLabel}
         role="img"
-        className={`w-16 h-16 rounded-lg ${color} flex items-center justify-center text-white font-bold shadow-lg ${pulse ? 'animate-pulse' : ''} ${ringColor ? `ring-4 ${ringColor}` : ''}`}
+        className={`w-12 h-12 sm:w-16 sm:h-16 rounded-lg ${color} flex items-center justify-center text-white font-bold shadow-lg ${pulse ? 'animate-pulse' : ''} ${ringColor ? `ring-4 ${ringColor}` : ''}`}
       >
         {count}
       </div>
-      <span className="text-xs text-slate-500 dark:text-slate-400">{label}</span>
+      <span className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400">
+        <span className="sm:hidden">{label}</span>
+        <span className="hidden sm:inline">{lgLabel || label}</span>
+      </span>
     </div>
   )
 }

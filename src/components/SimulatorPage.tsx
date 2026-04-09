@@ -12,6 +12,7 @@ import { GuidedTourOverlay } from './GuidedTour'
 import { useChallenges } from '../hooks/useChallenges'
 import { ChallengesButton, ChallengesPanel } from './ScenarioChallenges'
 import { StepThroughDebugger } from './StepThroughDebugger'
+import { BottomSheet } from './BottomSheet'
 import toast from 'react-hot-toast'
 
 const MetricsPanel = lazy(() => import('./MetricsPanel').then((m) => ({ default: m.MetricsPanel })))
@@ -48,6 +49,7 @@ export function SimulatorPage() {
     isRewind,
     exportState,
     importState,
+    snapshots,
     showDLQFromToast,
     setShowDLQFromToast,
     audioConsent,
@@ -55,6 +57,8 @@ export function SimulatorPage() {
   } = useSimulation()
   const [bottomTab, setBottomTab] = useState<'tasks' | 'events' | 'debug'>('tasks')
   const [showDLQ, setShowDLQ] = useState(false)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [metricsSheetOpen, setMetricsSheetOpen] = useState(false)
   const { isFullscreen, toggle: toggleFullscreen } = useFullscreen()
 
   const tour = useGuidedTour()
@@ -69,6 +73,7 @@ export function SimulatorPage() {
     resetProgress,
   } = challengeState
   const wasRunningRef = useRef(state.isRunning)
+  const [liveMessage, setLiveMessage] = useState('')
 
   useEffect(() => {
     if (wasRunningRef.current && !state.isRunning) {
@@ -82,6 +87,23 @@ export function SimulatorPage() {
       toast.success(`Challenge unlocked: ${lastUnlocked}!`, { icon: '🏆', duration: 3000 })
     }
   }, [lastUnlocked])
+
+  useEffect(() => {
+    const lastEvent = state.events[state.events.length - 1]
+    if (!lastEvent) return
+    if (
+      lastEvent.type === 'SYSTEM_OVERLOAD' ||
+      lastEvent.type === 'BACKPRESSURE_APPLIED' ||
+      lastEvent.type === 'WORKER_UNHEALTHY' ||
+      lastEvent.type === 'ALL_TASKS_COMPLETED'
+    ) {
+      const msg = lastEvent.message || lastEvent.type
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setLiveMessage(msg)
+      const t = setTimeout(() => setLiveMessage(''), 1000)
+      return () => clearTimeout(t)
+    }
+  }, [state.events])
 
   useShareableUrl(state.config)
 
@@ -114,6 +136,7 @@ export function SimulatorPage() {
         isFullscreen={isFullscreen}
         onCopyUrl={copyUrl}
         onRestartTour={tour.startTour}
+        onToggleSidebar={() => setSidebarOpen((s) => !s)}
         challengeButton={
           <ChallengesButton completedCount={completedCount} onClick={() => setShowPanel(true)} />
         }
@@ -124,7 +147,9 @@ export function SimulatorPage() {
       <div className={`flex flex-1 overflow-hidden ${isFullscreen ? 'fullscreen-demo' : ''}`}>
         <aside
           id="control-panel"
-          className={`border-r border-slate-200 dark:border-slate-800 bg-slate-100/80 dark:bg-slate-900/50 overflow-hidden flex flex-col ${isFullscreen ? 'w-16' : 'w-64'}`}
+          className={`border-r border-slate-200 dark:border-slate-800 bg-slate-100/80 dark:bg-slate-900/50 overflow-hidden flex flex-col ${
+            isFullscreen ? 'w-16' : 'w-64'
+          } ${sidebarOpen ? 'absolute inset-y-0 left-0 z-40 shadow-2xl lg:static lg:shadow-none' : 'hidden lg:flex'}`}
         >
           <ControlPanel
             config={state.config}
@@ -158,20 +183,31 @@ export function SimulatorPage() {
               />
             </div>
             {!isFullscreen && (
-              <aside
-                id="metrics-panel"
-                className="w-80 border-l border-slate-200 dark:border-slate-800 bg-slate-100/80 dark:bg-slate-900/50 overflow-y-auto"
-              >
-                <Suspense fallback={<PanelSkeleton />}>
-                  <MetricsPanel
-                    metrics={state.metrics}
-                    metricsHistory={state.metricsHistory}
-                    workerUtilization={state.workerUtilization}
-                    onExport={exportState}
-                    onImport={importState}
-                  />
-                </Suspense>
-              </aside>
+              <>
+                <aside
+                  id="metrics-panel"
+                  className="hidden lg:block w-80 border-l border-slate-200 dark:border-slate-800 bg-slate-100/80 dark:bg-slate-900/50 overflow-y-auto"
+                >
+                  <Suspense fallback={<PanelSkeleton />}>
+                    <MetricsPanel
+                      metrics={state.metrics}
+                      metricsHistory={state.metricsHistory}
+                      workerUtilization={state.workerUtilization}
+                      tasks={state.tasks}
+                      events={state.events}
+                      snapshots={snapshots}
+                      onExport={exportState}
+                      onImport={importState}
+                    />
+                  </Suspense>
+                </aside>
+                <button
+                  onClick={() => setMetricsSheetOpen(true)}
+                  className="lg:hidden fixed bottom-4 right-4 z-30 px-3 py-2 rounded-full bg-sky-600 text-white text-xs font-semibold shadow-lg"
+                >
+                  Metrics
+                </button>
+              </>
             )}
           </div>
 
@@ -239,6 +275,25 @@ export function SimulatorPage() {
         </main>
       </div>
 
+      {metricsSheetOpen && !isFullscreen && (
+        <BottomSheet
+          isOpen={metricsSheetOpen}
+          onClose={() => setMetricsSheetOpen(false)}
+          title="Metrics"
+        >
+          <MetricsPanel
+            metrics={state.metrics}
+            metricsHistory={state.metricsHistory}
+            workerUtilization={state.workerUtilization}
+            tasks={state.tasks}
+            events={state.events}
+            snapshots={snapshots}
+            onExport={exportState}
+            onImport={importState}
+          />
+        </BottomSheet>
+      )}
+
       {(showDLQ || showDLQFromToast) && (
         <Suspense fallback={null}>
           <DLQInspector
@@ -270,6 +325,10 @@ export function SimulatorPage() {
           onReset={resetProgress}
         />
       )}
+
+      <div aria-live="assertive" aria-atomic="true" className="sr-only">
+        {liveMessage}
+      </div>
     </div>
   )
 }

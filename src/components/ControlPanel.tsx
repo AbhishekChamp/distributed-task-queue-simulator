@@ -1,5 +1,6 @@
 import type { SimulationConfig } from '../types'
 import { SimulationPresets } from './SimulationPresets'
+import { PresetGallery } from './PresetGallery'
 import { Tooltip } from './Tooltip'
 
 interface ControlPanelProps {
@@ -167,6 +168,75 @@ export function ControlPanel({
             </label>
           </Tooltip>
 
+          <Tooltip content="Maximum tasks a worker can process per second. 0 means unlimited.">
+            <ControlRow label="Max TPS / Worker" value={`${config.maxTasksPerSecondPerWorker}`}>
+              <input
+                type="range"
+                min={0}
+                max={20}
+                step={1}
+                value={config.maxTasksPerSecondPerWorker}
+                onChange={(e) => onChange({ maxTasksPerSecondPerWorker: Number(e.target.value) })}
+                className="w-full accent-amber-500"
+                aria-label="Max tasks per second per worker"
+              />
+            </ControlRow>
+          </Tooltip>
+
+          <Tooltip content="Probability distribution used to generate task durations.">
+            <div className="space-y-1">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-slate-600 dark:text-slate-400">Duration Distribution</span>
+              </div>
+              <select
+                value={config.durationDistribution}
+                onChange={(e) =>
+                  onChange({
+                    durationDistribution: e.target
+                      .value as SimulationConfig['durationDistribution'],
+                  })
+                }
+                className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded px-2 py-1 text-sm text-slate-800 dark:text-slate-200"
+                aria-label="Duration distribution"
+              >
+                <option value="uniform">Uniform</option>
+                <option value="normal">Normal</option>
+                <option value="exponential">Exponential</option>
+                <option value="bimodal">Bimodal</option>
+              </select>
+            </div>
+          </Tooltip>
+
+          <Tooltip content="Automatically add or remove workers based on queue depth.">
+            <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={config.enableAutoScaling}
+                onChange={(e) => onChange({ enableAutoScaling: e.target.checked })}
+                className="accent-sky-500"
+                aria-label="Enable auto-scaling"
+              />
+              Enable Auto-Scaling
+            </label>
+          </Tooltip>
+
+          {config.enableAutoScaling && (
+            <Tooltip content="Queue depth threshold that triggers auto-scaling up or down.">
+              <ControlRow label="Scale Threshold" value={`${config.autoScalingQueueThreshold}`}>
+                <input
+                  type="range"
+                  min={5}
+                  max={200}
+                  step={5}
+                  value={config.autoScalingQueueThreshold}
+                  onChange={(e) => onChange({ autoScalingQueueThreshold: Number(e.target.value) })}
+                  className="w-full accent-emerald-500"
+                  aria-label="Auto-scaling queue threshold"
+                />
+              </ControlRow>
+            </Tooltip>
+          )}
+
           {onToggleAudio && (
             <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400 cursor-pointer">
               <input
@@ -240,6 +310,7 @@ export function ControlPanel({
       </div>
 
       <SimulationPresets onApply={onChange} />
+      <PresetGallery currentConfig={config} onApply={onChange} />
     </div>
   )
 }

@@ -5,7 +5,12 @@ export function ThemeToggle() {
   const { theme, setTheme } = useTheme()
 
   const cycle = () => {
-    const order: Array<'light' | 'dark' | 'system'> = ['light', 'dark', 'system']
+    const order: Array<'light' | 'dark' | 'system' | 'contrast'> = [
+      'light',
+      'dark',
+      'system',
+      'contrast',
+    ]
     const next = order[(order.indexOf(theme) + 1) % order.length]
     setTheme(next)
   }
@@ -20,6 +25,7 @@ export function ThemeToggle() {
       {theme === 'light' && <Sun className="w-4 h-4" />}
       {theme === 'dark' && <Moon className="w-4 h-4" />}
       {theme === 'system' && <Monitor className="w-4 h-4" />}
+      {theme === 'contrast' && <Contrast className="w-4 h-4" />}
       <span className="text-xs capitalize">{theme}</span>
     </button>
   )
@@ -48,6 +54,15 @@ function Monitor(props: SVGProps<SVGSVGElement>) {
       <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
       <line x1="8" y1="21" x2="16" y2="21" />
       <line x1="12" y1="17" x2="12" y2="21" />
+    </svg>
+  )
+}
+
+function Contrast(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" {...props}>
+      <circle cx="12" cy="12" r="10" />
+      <path d="M12 2a10 10 0 0 1 0 20V2z" fill="currentColor" />
     </svg>
   )
 }

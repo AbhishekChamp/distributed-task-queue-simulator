@@ -32,6 +32,44 @@ body {
   background: #020617;
 }
 
+.contrast body {
+  color: #ffffff;
+  background: #000000;
+}
+
+.contrast * {
+  border-color: #ffffff !important;
+}
+
+.contrast .bg-slate-100,
+.contrast .bg-slate-200,
+.contrast .bg-slate-50 {
+  background: #000000 !important;
+  color: #ffffff !important;
+}
+
+.contrast .dark\:bg-slate-900,
+.contrast .dark\:bg-slate-800,
+.contrast .dark\:bg-slate-950 {
+  background: #000000 !important;
+  color: #ffffff !important;
+}
+
+.contrast .text-slate-500,
+.contrast .text-slate-600,
+.contrast .text-slate-700,
+.contrast .text-slate-800 {
+  color: #ffffff !important;
+}
+
+.contrast .dark\:text-slate-400,
+.contrast .dark\:text-slate-500,
+.contrast .dark\:text-slate-300,
+.contrast .dark\:text-slate-200,
+.contrast .dark\:text-slate-100 {
+  color: #ffffff !important;
+}
+
 #root {
   min-height: 100svh;
   display: flex;
