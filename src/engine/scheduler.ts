@@ -16,6 +16,7 @@ export class Scheduler {
   private tasksProcessedLastSecond = 0
   private lastTick = Date.now()
   private lastWorkerIndex = -1
+  private autoScaleCooldown = 0
 
   constructor(
     tasks: Map<string, Task>,
@@ -55,8 +56,44 @@ export class Scheduler {
     this.recoverWorkers()
     this.processRetryQueue()
     this.assignTasks()
+    this.autoScale()
     this.updateMetrics()
     this.checkIdleState()
+  }
+
+  private autoScale(): void {
+    if (!this.config.enableAutoScaling) return
+    const threshold = this.config.autoScalingQueueThreshold
+    const current = this.workers.length
+    const target = this.config.workerCount
+    const queueDepth = this.mainQueue.size + this.retryQueue.size
+    const now = Date.now()
+
+    if (now < this.autoScaleCooldown) return
+
+    if (queueDepth > threshold && current < target + 5) {
+      const nextId = current + 1
+      const newWorker = createWorker(`worker-${nextId}`)
+      this.workers.push(newWorker)
+      this.emit({
+        type: 'WORKER_HEALTHY',
+        timestamp: now,
+        workerId: newWorker.id,
+        message: `Auto-scaled up to ${this.workers.length} workers`,
+      })
+      this.autoScaleCooldown = now + 2000
+    } else if (queueDepth < threshold * 0.3 && current > target) {
+      const removed = this.workers.pop()
+      if (removed) {
+        this.emit({
+          type: 'WORKER_IDLE',
+          timestamp: now,
+          workerId: removed.id,
+          message: `Auto-scaled down to ${this.workers.length} workers`,
+        })
+      }
+      this.autoScaleCooldown = now + 2000
+    }
   }
 
   private recoverWorkers(): void {
@@ -151,6 +188,13 @@ export class Scheduler {
         worker.currentTaskId = undefined
         task.completedAt = Date.now()
 
+        if (result.throttled) {
+          task.status = 'queued'
+          task.completedAt = undefined
+          this.mainQueue.enqueue(task.id, task.priority)
+          return
+        }
+
         if (result.success) {
           task.status = 'success'
           worker.processedCount += 1
@@ -179,13 +223,17 @@ export class Scheduler {
 
   private spawnBatchTasks(parentTask: Task): void {
     const size = parentTask.batchSize || 1
+    parentTask.childIds = parentTask.childIds || []
     for (let i = 0; i < size; i++) {
       const sub = createTask(
         Math.floor(Math.random() * 3),
         this.config.maxRetries,
         this.config.baseProcessingTime,
+        1,
+        this.config.durationDistribution,
       )
       sub.parentId = parentTask.id
+      parentTask.childIds.push(sub.id)
       this.tasks.set(sub.id, sub)
       this.mainQueue.enqueue(sub.id, sub.priority)
     }

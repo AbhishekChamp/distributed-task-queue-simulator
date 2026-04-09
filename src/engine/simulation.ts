@@ -8,7 +8,7 @@ import type {
 } from '../types'
 import { EventBus } from './eventBus'
 import { TaskQueue } from './queue'
-import { createWorker } from './worker'
+import { createWorker, resetWorkerBuckets } from './worker'
 import { Scheduler } from './scheduler'
 import { generateTasks, createTask } from './task'
 
@@ -46,6 +46,10 @@ export class SimulationEngine {
       maxQueueCapacity: 200,
       loadBalancingStrategy: 'round-robin',
       enableCircuitBreaker: true,
+      maxTasksPerSecondPerWorker: 0,
+      durationDistribution: 'uniform',
+      enableAutoScaling: false,
+      autoScalingQueueThreshold: 50,
       ...config,
     }
 
@@ -130,14 +134,10 @@ export class SimulationEngine {
     this.eventHistory = []
     this.metricsHistory = []
     this.workerUtilization = []
-    this.workers.forEach((w) => {
-      w.busy = false
-      w.currentTaskId = undefined
-      w.processedCount = 0
-      w.healthy = true
-      w.cooldownUntil = 0
-      w.consecutiveFailures = 0
-    })
+    resetWorkerBuckets()
+    this.workers = Array.from({ length: this.config.workerCount }, (_, i) =>
+      createWorker(`worker-${i + 1}`),
+    )
     this.scheduler = new Scheduler(
       this.tasks,
       this.workers,
@@ -155,7 +155,13 @@ export class SimulationEngine {
     const toAdd = Math.min(count, available)
 
     if (toAdd > 0) {
-      const newTasks = generateTasks(toAdd, this.config.maxRetries, this.config.baseProcessingTime)
+      const newTasks = generateTasks(
+        toAdd,
+        this.config.maxRetries,
+        this.config.baseProcessingTime,
+        1,
+        this.config.durationDistribution,
+      )
       for (const task of newTasks) {
         this.tasks.set(task.id, task)
         this.mainQueue.enqueue(task.id, task.priority)
@@ -192,6 +198,7 @@ export class SimulationEngine {
       this.config.maxRetries,
       this.config.baseProcessingTime,
       batchSize,
+      this.config.durationDistribution,
     )
     if (this.mainQueue.size < this.config.maxQueueCapacity) {
       this.tasks.set(task.id, task)

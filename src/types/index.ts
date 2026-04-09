@@ -1,5 +1,7 @@
 export type TaskStatus = 'queued' | 'processing' | 'success' | 'failed' | 'retry' | 'dead'
 
+export type DurationDistribution = 'uniform' | 'normal' | 'exponential' | 'bimodal'
+
 export interface Task {
   id: string
   status: TaskStatus
@@ -13,6 +15,7 @@ export interface Task {
   error?: string
   batchSize?: number
   parentId?: string
+  childIds?: string[]
 }
 
 export type WorkerProfile = 'fast' | 'normal' | 'slow' | 'unreliable'
@@ -39,6 +42,10 @@ export interface SimulationConfig {
   maxQueueCapacity: number
   loadBalancingStrategy: LoadBalancingStrategy
   enableCircuitBreaker: boolean
+  maxTasksPerSecondPerWorker: number
+  durationDistribution: DurationDistribution
+  enableAutoScaling: boolean
+  autoScalingQueueThreshold: number
 }
 
 export interface SimulationMetrics {
@@ -80,6 +87,20 @@ export interface SimulationState {
   events: SimulationEvent[]
   workerUtilization: WorkerUtilization[]
   bottleneck: BottleneckStage
+}
+
+export interface PersistedSession {
+  id: string
+  name: string
+  createdAt: number
+  metricsHistory: MetricsHistoryPoint[]
+  events: SimulationEvent[]
+}
+
+export interface SimulationPreset {
+  name: string
+  description: string
+  config: SimulationConfig
 }
 
 export type SimulationEventType =

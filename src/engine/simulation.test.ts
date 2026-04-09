@@ -15,6 +15,10 @@ describe('SimulationEngine', () => {
       maxQueueCapacity: 50,
       loadBalancingStrategy: 'round-robin',
       enableCircuitBreaker: true,
+      maxTasksPerSecondPerWorker: 0,
+      durationDistribution: 'uniform',
+      enableAutoScaling: false,
+      autoScalingQueueThreshold: 50,
     })
   })
 
