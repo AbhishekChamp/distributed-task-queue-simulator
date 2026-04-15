@@ -109,6 +109,8 @@ function ComparisonPane({
           retryQueue={sim.state.retryQueue}
           deadLetterQueue={sim.state.deadLetterQueue}
           maxQueueCapacity={sim.state.config.maxQueueCapacity}
+          simulationSpeed={sim.state.config.simulationSpeed}
+          events={sim.state.events}
         />
       </div>
 

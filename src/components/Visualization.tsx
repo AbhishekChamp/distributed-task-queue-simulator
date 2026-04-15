@@ -1,6 +1,8 @@
+import { useRef, useEffect, useState, forwardRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import type { Task, Worker, WorkerProfile } from '../types'
+import type { Task, Worker, WorkerProfile, SimulationEvent } from '../types'
 import { useReducedMotion } from '../hooks/useReducedMotion'
+import { TaskParticles } from './TaskParticles'
 
 interface VisualizationProps {
   tasks: Map<string, Task>
@@ -9,6 +11,8 @@ interface VisualizationProps {
   retryQueue: string[]
   deadLetterQueue: string[]
   maxQueueCapacity?: number
+  simulationSpeed?: number
+  events?: SimulationEvent[]
 }
 
 const profileColors: Record<WorkerProfile, string> = {
@@ -18,6 +22,15 @@ const profileColors: Record<WorkerProfile, string> = {
   unreliable: 'bg-rose-400',
 }
 
+function useNow(interval = 100) {
+  const [now, setNow] = useState(() => Date.now())
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), interval)
+    return () => clearInterval(id)
+  }, [interval])
+  return now
+}
+
 export function Visualization({
   tasks,
   workers,
@@ -25,8 +38,25 @@ export function Visualization({
   retryQueue,
   deadLetterQueue,
   maxQueueCapacity = 200,
+  simulationSpeed = 1,
+  events = [],
 }: VisualizationProps) {
   const reducedMotion = useReducedMotion()
+  const now = useNow(100)
+  const containerRef = useRef<HTMLDivElement>(null)
+  const queueRef = useRef<HTMLDivElement>(null)
+  const resultsRef = useRef<HTMLDivElement>(null)
+  const retryQueueCardRef = useRef<HTMLDivElement>(null)
+  const dlqCardRef = useRef<HTMLDivElement>(null)
+  const workerRefs = useRef<Map<string, HTMLDivElement>>(new Map())
+
+  useEffect(() => {
+    const currentIds = new Set(workers.map((w) => w.id))
+    workerRefs.current.forEach((_, id) => {
+      if (!currentIds.has(id)) workerRefs.current.delete(id)
+    })
+  }, [workers])
+
   const mainCount = Math.min(mainQueue.length, 24)
   const retryCount = Math.min(retryQueue.length, 12)
   const dlqCount = Math.min(deadLetterQueue.length, 12)
@@ -43,7 +73,20 @@ export function Visualization({
   }
 
   return (
-    <div className="space-y-6">
+    <div ref={containerRef} className="relative space-y-6">
+      <TaskParticles
+        tasks={tasks}
+        workers={workers}
+        events={events}
+        containerRef={containerRef}
+        queueRef={queueRef}
+        resultsRef={resultsRef}
+        retryQueueCardRef={retryQueueCardRef}
+        dlqCardRef={dlqCardRef}
+        workerRefs={workerRefs}
+        reducedMotion={reducedMotion}
+      />
+
       <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-500">
         Pipeline
       </h2>
@@ -63,6 +106,7 @@ export function Visualization({
         />
         <FlowArrow aria-label="Pipeline arrow" animated={!reducedMotion} />
         <StageBox
+          ref={queueRef}
           label="Queue"
           lgLabel="Main Queue"
           count={mainQueue.length}
@@ -80,6 +124,7 @@ export function Visualization({
         />
         <FlowArrow aria-label="Pipeline arrow" animated={!reducedMotion} />
         <StageBox
+          ref={resultsRef}
           label="Done"
           lgLabel="Results"
           count={
@@ -140,12 +185,14 @@ export function Visualization({
           color="bg-sky-500"
         />
         <QueueCard
+          ref={retryQueueCardRef}
           title="Retry Queue"
           count={retryQueue.length}
           items={retryCount}
           color="bg-amber-500"
         />
         <QueueCard
+          ref={dlqCardRef}
           title="Dead Letter Queue"
           count={deadLetterQueue.length}
           items={dlqCount}
@@ -166,9 +213,21 @@ export function Visualization({
         <div className="flex flex-wrap gap-2">
           {workers.map((worker) => {
             const isUnhealthy = !worker.healthy
+            const task = worker.currentTaskId ? tasks.get(worker.currentTaskId) : undefined
+            const progress =
+              task && task.startedAt
+                ? Math.min(1, (now - task.startedAt) / (task.duration / simulationSpeed))
+                : 0
+            const radius = 16
+            const circumference = 2 * Math.PI * radius
+            const strokeDashoffset = circumference * (1 - progress)
+
             return (
               <motion.div
                 key={worker.id}
+                ref={(el) => {
+                  if (el) workerRefs.current.set(worker.id, el)
+                }}
                 animate={
                   reducedMotion
                     ? {}
@@ -197,6 +256,24 @@ export function Visualization({
                 {isUnhealthy && (
                   <span className="absolute -bottom-1 text-[8px] text-rose-600 font-bold">CB</span>
                 )}
+                {worker.busy && task && (
+                  <svg
+                    className="absolute inset-0 w-full h-full -rotate-90 pointer-events-none"
+                    viewBox="0 0 40 40"
+                  >
+                    <circle
+                      cx="20"
+                      cy="20"
+                      r={radius}
+                      fill="none"
+                      stroke="rgba(255,255,255,0.8)"
+                      strokeWidth="3"
+                      strokeDasharray={circumference}
+                      strokeDashoffset={strokeDashoffset}
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                )}
               </motion.div>
             )
           })}
@@ -205,8 +282,16 @@ export function Visualization({
 
       <div className="space-y-2">
         <h3 className="text-xs font-semibold text-slate-500 dark:text-slate-500">Live Tasks</h3>
-        <div className="flex flex-wrap gap-1">
-          <AnimatePresence>
+        <motion.div
+          className="flex flex-wrap gap-1"
+          variants={{
+            visible: { transition: { staggerChildren: 0.02 } },
+            hidden: {},
+          }}
+          initial="hidden"
+          animate="visible"
+        >
+          <AnimatePresence mode="popLayout">
             {Array.from(tasks.values())
               .filter((t) => t.status === 'processing')
               .slice(0, 30)
@@ -214,42 +299,48 @@ export function Visualization({
                 <motion.div
                   key={task.id}
                   layoutId={task.id}
-                  initial={reducedMotion ? false : { opacity: 0, scale: 0 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={reducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0 }}
-                  transition={reducedMotion ? { duration: 0 } : undefined}
+                  layout
+                  variants={{
+                    hidden: reducedMotion ? {} : { opacity: 0, scale: 0 },
+                    visible: { opacity: 1, scale: 1 },
+                    exit: reducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0 },
+                  }}
+                  transition={
+                    reducedMotion
+                      ? { duration: 0 }
+                      : { type: 'spring', stiffness: 400, damping: 25 }
+                  }
                   className="w-6 h-6 rounded bg-amber-500"
                   title={task.id}
                   aria-hidden="true"
                 />
               ))}
           </AnimatePresence>
-        </div>
+        </motion.div>
       </div>
     </div>
   )
 }
 
-function StageBox({
-  label,
-  lgLabel,
-  count,
-  color,
-  pulse = false,
-  ringColor,
-  'aria-label': ariaLabel,
-}: {
-  label: string
-  lgLabel?: string
-  count: number
-  color: string
-  pulse?: boolean
-  ringColor?: string
-  'aria-label'?: string
-}) {
+const StageBox = forwardRef<
+  HTMLDivElement,
+  {
+    label: string
+    lgLabel?: string
+    count: number
+    color: string
+    pulse?: boolean
+    ringColor?: string
+    'aria-label'?: string
+  }
+>(function StageBox(
+  { label, lgLabel, count, color, pulse = false, ringColor, 'aria-label': ariaLabel },
+  ref,
+) {
   return (
     <div className="flex flex-col items-center gap-1">
       <div
+        ref={ref}
         aria-label={ariaLabel}
         role="img"
         className={`w-12 h-12 sm:w-16 sm:h-16 rounded-lg ${color} flex items-center justify-center text-white font-bold shadow-lg ${pulse ? 'animate-pulse' : ''} ${ringColor ? `ring-4 ${ringColor}` : ''}`}
@@ -262,7 +353,7 @@ function StageBox({
       </span>
     </div>
   )
-}
+})
 
 function FlowArrow({
   'aria-label': ariaLabel,
@@ -305,31 +396,49 @@ function FlowArrow({
   )
 }
 
-function QueueCard({
-  title,
-  count,
-  items,
-  color,
-}: {
-  title: string
-  count: number
-  items: number
-  color: string
-}) {
+const QueueCard = forwardRef<
+  HTMLDivElement,
+  {
+    title: string
+    count: number
+    items: number
+    color: string
+  }
+>(function QueueCard({ title, count, items, color }, ref) {
   return (
-    <div className="rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-100/80 dark:bg-slate-900/50 p-3">
+    <div
+      ref={ref}
+      className="rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-100/80 dark:bg-slate-900/50 p-3"
+    >
       <div className="flex items-center justify-between mb-2">
         <span className="text-sm text-slate-600 dark:text-slate-400">{title}</span>
         <span className="font-mono text-slate-800 dark:text-slate-200">{count}</span>
       </div>
-      <div className="flex flex-wrap gap-1">
+      <motion.div
+        className="flex flex-wrap gap-1"
+        variants={{
+          visible: { transition: { staggerChildren: 0.015 } },
+          hidden: {},
+        }}
+        initial="hidden"
+        animate="visible"
+      >
         {Array.from({ length: items }).map((_, i) => (
-          <div key={i} className={`w-3 h-3 rounded-sm ${color}`} />
+          <motion.div
+            key={i}
+            variants={{
+              hidden: { opacity: 0, scale: 0, y: 4 },
+              visible: { opacity: 1, scale: 1, y: 0 },
+            }}
+            layout
+            transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+            className={`w-3 h-3 rounded-sm ${color}`}
+          />
         ))}
         {count > items && (
           <span className="text-xs text-slate-400 dark:text-slate-500 ml-1">+{count - items}</span>
         )}
-      </div>
+      </motion.div>
     </div>
   )
-}
+})

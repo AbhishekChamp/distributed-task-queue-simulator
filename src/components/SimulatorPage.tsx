@@ -180,6 +180,8 @@ export function SimulatorPage() {
                 retryQueue={state.retryQueue}
                 deadLetterQueue={state.deadLetterQueue}
                 maxQueueCapacity={state.config.maxQueueCapacity}
+                simulationSpeed={state.config.simulationSpeed}
+                events={state.events}
               />
             </div>
             {!isFullscreen && (
