@@ -1,4 +1,4 @@
-import { useState, useCallback, Suspense, lazy, useEffect, useRef } from 'react'
+import { useState, useCallback, Suspense, lazy, useEffect, useRef, useMemo } from 'react'
 import { useSimulation } from '../hooks/useSimulation.tsx'
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts'
 import { useFullscreen } from '../hooks/useFullscreen'
@@ -107,11 +107,16 @@ export function SimulatorPage() {
 
   useShareableUrl(state.config)
 
-  useKeyboardShortcuts({
-    onTogglePlay: () => (state.isRunning ? pause() : start()),
-    onReset: reset,
-    onAddTasks: addTasks,
-  })
+  const shortcuts = useMemo(
+    () => ({
+      onTogglePlay: () => (state.isRunning ? pause() : start()),
+      onReset: reset,
+      onAddTasks: addTasks,
+    }),
+    [state.isRunning, pause, start, reset, addTasks],
+  )
+
+  useKeyboardShortcuts(shortcuts)
 
   const copyUrl = useCallback(() => {
     navigator.clipboard.writeText(window.location.href)

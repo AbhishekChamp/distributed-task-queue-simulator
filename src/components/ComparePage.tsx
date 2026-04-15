@@ -1,12 +1,14 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { Link } from '@tanstack/react-router'
 import { useMiniSimulation } from '../hooks/useMiniSimulation'
 import { Visualization } from './Visualization'
 import { MetricsPanel } from './MetricsPanel'
 
 export function ComparePage() {
-  const left = useMiniSimulation({ loadBalancingStrategy: 'round-robin' })
-  const right = useMiniSimulation({ loadBalancingStrategy: 'least-connections' })
+  const leftConfig = useMemo(() => ({ loadBalancingStrategy: 'round-robin' as const }), [])
+  const rightConfig = useMemo(() => ({ loadBalancingStrategy: 'least-connections' as const }), [])
+  const left = useMiniSimulation(leftConfig)
+  const right = useMiniSimulation(rightConfig)
   const [leftRunning, setLeftRunning] = useState(false)
   const [rightRunning, setRightRunning] = useState(false)
 

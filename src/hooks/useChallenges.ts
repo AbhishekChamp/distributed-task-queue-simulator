@@ -78,6 +78,7 @@ export function useChallenges(metrics: SimulationMetrics, config: SimulationConf
   const [lastUnlocked, setLastUnlocked] = useState<string | null>(null)
 
   const checkChallenges = useCallback(() => {
+    let unlockedTitle: string | null = null
     setProgress((prev) => {
       const next = { ...prev }
       let changed = false
@@ -85,7 +86,7 @@ export function useChallenges(metrics: SimulationMetrics, config: SimulationConf
         if (!next[ch.id] && ch.check(metrics, config)) {
           next[ch.id] = true
           changed = true
-          setLastUnlocked(ch.title)
+          unlockedTitle = ch.title
         }
       }
       if (changed) {
@@ -93,6 +94,9 @@ export function useChallenges(metrics: SimulationMetrics, config: SimulationConf
       }
       return next
     })
+    if (unlockedTitle) {
+      setLastUnlocked(unlockedTitle)
+    }
   }, [metrics, config])
 
   const resetProgress = useCallback(() => {

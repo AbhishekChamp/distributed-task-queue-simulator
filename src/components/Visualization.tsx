@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState, forwardRef } from 'react'
+import { useRef, useEffect, useState, useCallback, forwardRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import type { Task, Worker, WorkerProfile, SimulationEvent } from '../types'
 import { useReducedMotion } from '../hooks/useReducedMotion'
@@ -211,72 +211,17 @@ export function Visualization({
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
-          {workers.map((worker) => {
-            const isUnhealthy = !worker.healthy
-            const task = worker.currentTaskId ? tasks.get(worker.currentTaskId) : undefined
-            const progress =
-              task && task.startedAt
-                ? Math.min(1, (now - task.startedAt) / (task.duration / simulationSpeed))
-                : 0
-            const radius = 16
-            const circumference = 2 * Math.PI * radius
-            const strokeDashoffset = circumference * (1 - progress)
-
-            return (
-              <motion.div
-                key={worker.id}
-                ref={(el) => {
-                  if (el) workerRefs.current.set(worker.id, el)
-                }}
-                animate={
-                  reducedMotion
-                    ? {}
-                    : {
-                        scale: worker.busy ? 1.05 : 1,
-                        backgroundColor: isUnhealthy
-                          ? '#f43f5e'
-                          : worker.busy
-                            ? '#f59e0b'
-                            : '#cbd5e1',
-                      }
-                }
-                className="w-10 h-10 rounded-md flex items-center justify-center text-sm font-bold text-slate-900 dark:text-slate-900 relative"
-                title={`${worker.id} | ${worker.profile} | Processed: ${worker.processedCount}${isUnhealthy ? ' | CIRCUIT BREAKER' : ''}`}
-                aria-label={`Worker ${worker.id}, profile ${worker.profile}, processed ${worker.processedCount} tasks${isUnhealthy ? ', circuit breaker active' : ''}`}
-                role="img"
-                style={{
-                  backgroundColor: isUnhealthy ? '#f43f5e' : worker.busy ? '#f59e0b' : '#cbd5e1',
-                }}
-              >
-                {worker.id.split('-')[1]}
-                <span
-                  className={`absolute -top-1 -right-1 w-3 h-3 rounded-full border-2 border-white dark:border-slate-900 ${profileColors[worker.profile]}`}
-                  aria-hidden="true"
-                />
-                {isUnhealthy && (
-                  <span className="absolute -bottom-1 text-[8px] text-rose-600 font-bold">CB</span>
-                )}
-                {worker.busy && task && (
-                  <svg
-                    className="absolute inset-0 w-full h-full -rotate-90 pointer-events-none"
-                    viewBox="0 0 40 40"
-                  >
-                    <circle
-                      cx="20"
-                      cy="20"
-                      r={radius}
-                      fill="none"
-                      stroke="rgba(255,255,255,0.8)"
-                      strokeWidth="3"
-                      strokeDasharray={circumference}
-                      strokeDashoffset={strokeDashoffset}
-                      strokeLinecap="round"
-                    />
-                  </svg>
-                )}
-              </motion.div>
-            )
-          })}
+          {workers.map((worker) => (
+            <WorkerDot
+              key={worker.id}
+              worker={worker}
+              task={worker.currentTaskId ? tasks.get(worker.currentTaskId) : undefined}
+              now={now}
+              simulationSpeed={simulationSpeed}
+              reducedMotion={reducedMotion}
+              workerRefs={workerRefs}
+            />
+          ))}
         </div>
       </div>
 
@@ -442,3 +387,83 @@ const QueueCard = forwardRef<
     </div>
   )
 })
+
+function WorkerDot({
+  worker,
+  task,
+  now,
+  simulationSpeed,
+  reducedMotion,
+  workerRefs,
+}: {
+  worker: Worker
+  task?: Task
+  now: number
+  simulationSpeed: number
+  reducedMotion: boolean
+  workerRefs: React.RefObject<Map<string, HTMLDivElement>>
+}) {
+  const isUnhealthy = !worker.healthy
+  const progress =
+    task && task.startedAt
+      ? Math.min(1, (now - task.startedAt) / (task.duration / simulationSpeed))
+      : 0
+  const radius = 16
+  const circumference = 2 * Math.PI * radius
+  const strokeDashoffset = circumference * (1 - progress)
+
+  const setRef = useCallback(
+    (el: HTMLDivElement | null) => {
+      if (el) workerRefs.current.set(worker.id, el)
+    },
+    [worker.id, workerRefs],
+  )
+
+  return (
+    <motion.div
+      ref={setRef}
+      animate={
+        reducedMotion
+          ? {}
+          : {
+              scale: worker.busy ? 1.05 : 1,
+              backgroundColor: isUnhealthy ? '#f43f5e' : worker.busy ? '#f59e0b' : '#cbd5e1',
+            }
+      }
+      className="w-10 h-10 rounded-md flex items-center justify-center text-sm font-bold text-slate-900 dark:text-slate-900 relative"
+      title={`${worker.id} | ${worker.profile} | Processed: ${worker.processedCount}${isUnhealthy ? ' | CIRCUIT BREAKER' : ''}`}
+      aria-label={`Worker ${worker.id}, profile ${worker.profile}, processed ${worker.processedCount} tasks${isUnhealthy ? ', circuit breaker active' : ''}`}
+      role="img"
+      style={{
+        backgroundColor: isUnhealthy ? '#f43f5e' : worker.busy ? '#f59e0b' : '#cbd5e1',
+      }}
+    >
+      {worker.id.split('-')[1]}
+      <span
+        className={`absolute -top-1 -right-1 w-3 h-3 rounded-full border-2 border-white dark:border-slate-900 ${profileColors[worker.profile]}`}
+        aria-hidden="true"
+      />
+      {isUnhealthy && (
+        <span className="absolute -bottom-1 text-[8px] text-rose-600 font-bold">CB</span>
+      )}
+      {worker.busy && task && (
+        <svg
+          className="absolute inset-0 w-full h-full -rotate-90 pointer-events-none"
+          viewBox="0 0 40 40"
+        >
+          <circle
+            cx="20"
+            cy="20"
+            r={radius}
+            fill="none"
+            stroke="rgba(255,255,255,0.8)"
+            strokeWidth="3"
+            strokeDasharray={circumference}
+            strokeDashoffset={strokeDashoffset}
+            strokeLinecap="round"
+          />
+        </svg>
+      )}
+    </motion.div>
+  )
+}

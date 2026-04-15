@@ -105,7 +105,7 @@ export function useSimulation() {
             snapshotsRef.current.shift()
           }
           setSnapshotsCount(snapshotsRef.current.length)
-          setSnapshots(snapshotsRef.current)
+          setSnapshots([...snapshotsRef.current])
           setSimulationState(state)
           saveConfig(state.config)
         }
