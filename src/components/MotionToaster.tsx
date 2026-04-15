@@ -1,9 +1,21 @@
+import { useRef, useCallback } from 'react'
 import { useToaster } from 'react-hot-toast'
 import { AnimatePresence, motion } from 'framer-motion'
 
 export function MotionToaster() {
   const { toasts, handlers } = useToaster()
   const { startPause, endPause, updateHeight } = handlers
+  const measuredRef = useRef<Set<string>>(new Set())
+
+  const setMeasuredRef = useCallback(
+    (toastId: string) => (el: HTMLDivElement | null) => {
+      if (el && !measuredRef.current.has(toastId)) {
+        measuredRef.current.add(toastId)
+        updateHeight(toastId, el.getBoundingClientRect().height)
+      }
+    },
+    [updateHeight],
+  )
 
   return (
     <div
@@ -42,9 +54,7 @@ export function MotionToaster() {
                 onMouseLeave={endPause}
               >
                 <div
-                  ref={(el) => {
-                    if (el) updateHeight(toast.id, el.getBoundingClientRect().height)
-                  }}
+                  ref={setMeasuredRef(toast.id)}
                   className={`rounded-lg border ${border} ${bg} ${text} text-sm shadow-lg px-3.5 py-2.5 max-w-xs`}
                 >
                   {toast.message as React.ReactNode}
