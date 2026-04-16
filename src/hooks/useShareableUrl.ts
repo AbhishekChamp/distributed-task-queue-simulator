@@ -15,6 +15,8 @@ function serializeConfig(config: SimulationConfig): string {
   params.set('dd', config.durationDistribution)
   params.set('as', config.enableAutoScaling ? '1' : '0')
   params.set('at', String(config.autoScalingQueueThreshold))
+  params.set('nl', String(config.networkLatencyMs))
+  params.set('nj', String(config.networkJitterMs))
   return params.toString()
 }
 
@@ -47,6 +49,10 @@ export function readConfigFromUrl(): Partial<SimulationConfig> | undefined {
   if (as) result.enableAutoScaling = as === '1'
   const at = params.get('at')
   if (at) result.autoScalingQueueThreshold = Number(at)
+  const nl = params.get('nl')
+  if (nl) result.networkLatencyMs = Number(nl)
+  const nj = params.get('nj')
+  if (nj) result.networkJitterMs = Number(nj)
   return result
 }
 

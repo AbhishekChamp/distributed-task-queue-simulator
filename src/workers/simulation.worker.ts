@@ -55,5 +55,20 @@ self.onmessage = (e: MessageEvent) => {
       broadcastState()
       break
     }
+    case 'KILL_WORKER': {
+      engine?.killWorker(payload?.workerId)
+      broadcastState()
+      break
+    }
+    case 'HEAL_WORKER': {
+      engine?.healWorker(payload?.workerId)
+      broadcastState()
+      break
+    }
+    case 'FAIL_TASK': {
+      engine?.failTask(payload?.taskId)
+      broadcastState()
+      break
+    }
   }
 }

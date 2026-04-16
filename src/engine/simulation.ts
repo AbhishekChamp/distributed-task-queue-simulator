@@ -50,6 +50,8 @@ export class SimulationEngine {
       durationDistribution: 'uniform',
       enableAutoScaling: false,
       autoScalingQueueThreshold: 50,
+      networkLatencyMs: 0,
+      networkJitterMs: 0,
       ...config,
     }
 
@@ -284,6 +286,50 @@ export class SimulationEngine {
       metricsHistory: [...this.metricsHistory],
       workerUtilization: this.workerUtilization.map((u) => ({ ...u, history: [...u.history] })),
       bottleneck: this.detectBottleneck(),
+      retryDelays: this.retryQueue.getAllRetryDelays(),
+    }
+  }
+
+  killWorker(workerId: string): void {
+    const worker = this.workers.find((w) => w.id === workerId)
+    if (worker && worker.healthy) {
+      worker.healthy = false
+      worker.cooldownUntil = Date.now() + 5000
+      this.eventBus.emit({
+        type: 'WORKER_UNHEALTHY',
+        timestamp: Date.now(),
+        workerId: worker.id,
+        message: 'Manually killed by user',
+      })
+    }
+  }
+
+  healWorker(workerId: string): void {
+    const worker = this.workers.find((w) => w.id === workerId)
+    if (worker && !worker.healthy) {
+      worker.healthy = true
+      worker.consecutiveFailures = 0
+      worker.cooldownUntil = 0
+      this.eventBus.emit({
+        type: 'WORKER_HEALTHY',
+        timestamp: Date.now(),
+        workerId: worker.id,
+        message: 'Manually healed by user',
+      })
+    }
+  }
+
+  failTask(taskId: string): void {
+    const task = this.tasks.get(taskId)
+    if (!task || task.status !== 'processing') return
+    task.status = 'failed'
+    task.error = 'Manually failed by user'
+    const worker = this.workers.find((w) => w.currentTaskId === taskId)
+    if (worker) {
+      worker.busy = false
+      worker.currentTaskId = undefined
+      worker.consecutiveFailures += 1
+      this.scheduler['handleTaskFailure'](task, worker)
     }
   }
 

@@ -7,6 +7,7 @@ interface EventLogProps {
 
 const eventTypeColors: Record<SimulationEventType, string> = {
   TASK_CREATED: 'text-sky-600 dark:text-sky-400',
+  TASK_ASSIGNED: 'text-cyan-600 dark:text-cyan-400',
   TASK_STARTED: 'text-amber-600 dark:text-amber-400',
   TASK_COMPLETED: 'text-emerald-600 dark:text-emerald-400',
   TASK_FAILED: 'text-rose-600 dark:text-rose-400',

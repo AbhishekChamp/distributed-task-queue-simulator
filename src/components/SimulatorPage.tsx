@@ -54,6 +54,9 @@ export function SimulatorPage() {
     setShowDLQFromToast,
     audioConsent,
     setAudioConsent,
+    killWorker,
+    healWorker,
+    failTask,
   } = useSimulation()
   const [bottomTab, setBottomTab] = useState<'tasks' | 'events' | 'debug'>('tasks')
   const [showDLQ, setShowDLQ] = useState(false)
@@ -187,6 +190,11 @@ export function SimulatorPage() {
                 maxQueueCapacity={state.config.maxQueueCapacity}
                 simulationSpeed={state.config.simulationSpeed}
                 events={state.events}
+                retryDelays={state.retryDelays}
+                strategy={state.config.loadBalancingStrategy}
+                onKillWorker={killWorker}
+                onHealWorker={healWorker}
+                onFailTask={failTask}
               />
             </div>
             {!isFullscreen && (

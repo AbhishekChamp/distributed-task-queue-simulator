@@ -59,4 +59,12 @@ export class TaskQueue {
   clearRetryDelay(taskId: string): void {
     this.retryDelays.delete(taskId)
   }
+
+  getAllRetryDelays(): Record<string, number> {
+    const result: Record<string, number> = {}
+    this.retryDelays.forEach((delay, id) => {
+      result[id] = delay
+    })
+    return result
+  }
 }

@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 interface SparklineProps {
   data: number[]
@@ -7,6 +7,8 @@ interface SparklineProps {
   color?: string
   fill?: boolean
   'aria-label'?: string
+  onScrub?: (index: number, value: number) => void
+  onLeave?: () => void
 }
 
 export function Sparkline({
@@ -16,8 +18,11 @@ export function Sparkline({
   color = '#38bdf8',
   fill = true,
   'aria-label': ariaLabel,
+  onScrub,
+  onLeave,
 }: SparklineProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const [hoverX, setHoverX] = useState<number | null>(null)
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -62,7 +67,43 @@ export function Sparkline({
       ctx.fillStyle = gradient
       ctx.fill()
     }
-  }, [data, width, height, color, fill])
 
-  return <canvas ref={canvasRef} className="block" aria-label={ariaLabel} role="img" />
+    if (hoverX != null) {
+      ctx.strokeStyle = '#ffffff'
+      ctx.lineWidth = 1
+      ctx.beginPath()
+      ctx.moveTo(hoverX, 0)
+      ctx.lineTo(hoverX, height)
+      ctx.stroke()
+    }
+  }, [data, width, height, color, fill, hoverX])
+
+  const handleMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!onScrub || data.length < 2) return
+    const rect = e.currentTarget.getBoundingClientRect()
+    const x = e.clientX - rect.left
+    const pad = 2
+    const chartW = width - pad * 2
+    const ratio = Math.max(0, Math.min(1, (x - pad) / chartW))
+    const index = Math.round(ratio * (data.length - 1))
+    const clampedIndex = Math.max(0, Math.min(data.length - 1, index))
+    setHoverX(x)
+    onScrub(clampedIndex, data[clampedIndex])
+  }
+
+  const handleLeave = () => {
+    setHoverX(null)
+    onLeave?.()
+  }
+
+  return (
+    <canvas
+      ref={canvasRef}
+      className="block cursor-crosshair"
+      aria-label={ariaLabel}
+      role="img"
+      onMouseMove={handleMove}
+      onMouseLeave={handleLeave}
+    />
+  )
 }

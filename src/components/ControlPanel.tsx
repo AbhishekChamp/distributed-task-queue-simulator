@@ -256,6 +256,36 @@ export function ControlPanel({
             </label>
           )}
 
+          <Tooltip content="Fixed network latency added before a task starts processing.">
+            <ControlRow label="Network Latency" value={`${config.networkLatencyMs ?? 0}ms`}>
+              <input
+                type="range"
+                min={0}
+                max={1000}
+                step={50}
+                value={config.networkLatencyMs ?? 0}
+                onChange={(e) => onChange({ networkLatencyMs: Number(e.target.value) })}
+                className="w-full accent-cyan-500"
+                aria-label="Network latency milliseconds"
+              />
+            </ControlRow>
+          </Tooltip>
+
+          <Tooltip content="Random jitter added on top of network latency.">
+            <ControlRow label="Jitter" value={`${config.networkJitterMs ?? 0}ms`}>
+              <input
+                type="range"
+                min={0}
+                max={500}
+                step={25}
+                value={config.networkJitterMs ?? 0}
+                onChange={(e) => onChange({ networkJitterMs: Number(e.target.value) })}
+                className="w-full accent-pink-500"
+                aria-label="Network jitter milliseconds"
+              />
+            </ControlRow>
+          </Tooltip>
+
           {onAddBatch && (
             <div className="pt-2 border-t border-slate-200 dark:border-slate-800">
               <button

@@ -9,6 +9,8 @@ import type {
 } from '../types'
 import { Sparkline } from './Sparkline'
 import { Tooltip } from './Tooltip'
+import { LatencyHistogram } from './LatencyHistogram'
+import { CumulativeFlowDiagram } from './CumulativeFlowDiagram'
 import {
   downloadCSV,
   buildTaskExportData,
@@ -41,6 +43,7 @@ export function MetricsPanel({
 }: MetricsPanelProps) {
   const [sessions, setSessions] = useState<{ id: string; name: string; createdAt: number }[]>([])
   const [showReplay, setShowReplay] = useState(false)
+  const [scrub, setScrub] = useState<{ label: string; value: string } | null>(null)
 
   const refreshSessions = useCallback(async () => {
     const list = await loadSessions()
@@ -172,6 +175,13 @@ export function MetricsPanel({
       <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-500">
         Metrics
       </h2>
+
+      {scrub && (
+        <div className="rounded-md border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60 px-2 py-1 text-xs text-slate-700 dark:text-slate-300">
+          <span className="font-medium">{scrub.label}:</span> {scrub.value}
+        </div>
+      )}
+
       <div className="grid grid-cols-1 gap-3">
         {items.map((item) => {
           const history = metricsHistory.map((m) => m[item.historyKey] as number)
@@ -196,6 +206,10 @@ export function MetricsPanel({
                 height={28}
                 color={item.color}
                 aria-label={`${item.label} trend chart`}
+                onScrub={(_, value) =>
+                  setScrub({ label: item.label, value: String(Math.round(value * 100) / 100) })
+                }
+                onLeave={() => setScrub(null)}
               />
             </div>
           )
@@ -222,6 +236,24 @@ export function MetricsPanel({
               </div>
             </div>
           ))}
+        </div>
+      </div>
+
+      <div className="pt-4 border-t border-slate-200 dark:border-slate-800">
+        <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-500 mb-2">
+          Latency Distribution
+        </h3>
+        <div className="rounded-md border border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-950/50 p-2">
+          <LatencyHistogram tasks={tasks} aria-label="Latency distribution histogram" />
+        </div>
+      </div>
+
+      <div className="pt-4 border-t border-slate-200 dark:border-slate-800">
+        <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-500 mb-2">
+          Cumulative Flow
+        </h3>
+        <div className="rounded-md border border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-950/50 p-2">
+          <CumulativeFlowDiagram data={metricsHistory} aria-label="Cumulative flow diagram" />
         </div>
       </div>
 

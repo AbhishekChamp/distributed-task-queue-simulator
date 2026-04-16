@@ -23,6 +23,7 @@ export interface SimulationStoreState {
   metricsHistory: MetricsHistoryPoint[]
   workerUtilization: WorkerUtilization[]
   bottleneck: BottleneckStage
+  retryDelays: Record<string, number>
 }
 
 export const useSimulationStore = create<SimulationStoreState>(() => ({
@@ -40,6 +41,8 @@ export const useSimulationStore = create<SimulationStoreState>(() => ({
     durationDistribution: 'uniform',
     enableAutoScaling: false,
     autoScalingQueueThreshold: 50,
+    networkLatencyMs: 0,
+    networkJitterMs: 0,
   },
   tasks: new Map(),
   workers: [],
@@ -64,6 +67,7 @@ export const useSimulationStore = create<SimulationStoreState>(() => ({
   metricsHistory: [],
   workerUtilization: [],
   bottleneck: 'none',
+  retryDelays: {},
 }))
 
 export function setSimulationState(state: Partial<SimulationStoreState>): void {

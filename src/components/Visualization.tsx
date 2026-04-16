@@ -1,6 +1,6 @@
 import { useRef, useEffect, useState, useCallback, forwardRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import type { Task, Worker, WorkerProfile, SimulationEvent } from '../types'
+import type { Task, Worker, WorkerProfile, SimulationEvent, LoadBalancingStrategy } from '../types'
 import { useReducedMotion } from '../hooks/useReducedMotion'
 import { TaskParticles } from './TaskParticles'
 
@@ -13,6 +13,11 @@ interface VisualizationProps {
   maxQueueCapacity?: number
   simulationSpeed?: number
   events?: SimulationEvent[]
+  retryDelays?: Record<string, number>
+  strategy?: LoadBalancingStrategy
+  onKillWorker?: (workerId: string) => void
+  onHealWorker?: (workerId: string) => void
+  onFailTask?: (taskId: string) => void
 }
 
 const profileColors: Record<WorkerProfile, string> = {
@@ -20,6 +25,12 @@ const profileColors: Record<WorkerProfile, string> = {
   normal: 'bg-sky-400',
   slow: 'bg-amber-400',
   unreliable: 'bg-rose-400',
+}
+
+const strategyLabels: Record<LoadBalancingStrategy, string> = {
+  'round-robin': 'RR',
+  'least-connections': 'LC',
+  random: 'RND',
 }
 
 function useNow(interval = 100) {
@@ -40,6 +51,11 @@ export function Visualization({
   maxQueueCapacity = 200,
   simulationSpeed = 1,
   events = [],
+  retryDelays = {},
+  strategy = 'round-robin',
+  onKillWorker,
+  onHealWorker,
+  onFailTask,
 }: VisualizationProps) {
   const reducedMotion = useReducedMotion()
   const now = useNow(100)
@@ -49,6 +65,7 @@ export function Visualization({
   const retryQueueCardRef = useRef<HTMLDivElement>(null)
   const dlqCardRef = useRef<HTMLDivElement>(null)
   const workerRefs = useRef<Map<string, HTMLDivElement>>(new Map())
+  const [flashes, setFlashes] = useState<{ id: string; workerId: string; until: number }[]>([])
 
   useEffect(() => {
     const currentIds = new Set(workers.map((w) => w.id))
@@ -56,6 +73,37 @@ export function Visualization({
       if (!currentIds.has(id)) workerRefs.current.delete(id)
     })
   }, [workers])
+
+  useEffect(() => {
+    const latest = events.slice(-5)
+    const newFlashes: { id: string; workerId: string; until: number }[] = []
+    for (const ev of latest) {
+      if (ev.type === 'TASK_ASSIGNED' && ev.workerId) {
+        newFlashes.push({
+          id: `${ev.timestamp}-${ev.workerId}`,
+          workerId: ev.workerId,
+          until: Date.now() + 800,
+        })
+      }
+    }
+    if (newFlashes.length > 0) {
+      queueMicrotask(() => {
+        setFlashes((prev) => {
+          const cutoff = Date.now()
+          const filtered = prev.filter((f) => f.until > cutoff)
+          return [...filtered, ...newFlashes]
+        })
+      })
+    }
+  }, [events])
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      const cutoff = Date.now()
+      setFlashes((prev) => prev.filter((f) => f.until > cutoff))
+    }, 200)
+    return () => clearInterval(id)
+  }, [])
 
   const mainCount = Math.min(mainQueue.length, 24)
   const retryCount = Math.min(retryQueue.length, 12)
@@ -190,6 +238,9 @@ export function Visualization({
           count={retryQueue.length}
           items={retryCount}
           color="bg-amber-500"
+          retryTaskIds={retryQueue.slice(0, 12)}
+          retryDelays={retryDelays}
+          now={now}
         />
         <QueueCard
           ref={dlqCardRef}
@@ -210,7 +261,7 @@ export function Visualization({
             <span>⚠️ Unreliable</span>
           </div>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2 relative">
           {workers.map((worker) => (
             <WorkerDot
               key={worker.id}
@@ -220,6 +271,11 @@ export function Visualization({
               simulationSpeed={simulationSpeed}
               reducedMotion={reducedMotion}
               workerRefs={workerRefs}
+              flash={flashes.some((f) => f.workerId === worker.id)}
+              strategy={strategy}
+              onKillWorker={onKillWorker}
+              onHealWorker={onHealWorker}
+              onFailTask={onFailTask}
             />
           ))}
         </div>
@@ -348,8 +404,12 @@ const QueueCard = forwardRef<
     count: number
     items: number
     color: string
+    retryTaskIds?: string[]
+    retryDelays?: Record<string, number>
+    now?: number
   }
->(function QueueCard({ title, count, items, color }, ref) {
+>(function QueueCard({ title, count, items, color, retryTaskIds, retryDelays, now }, ref) {
+  const showRetry = retryTaskIds && retryDelays && now !== undefined
   return (
     <div
       ref={ref}
@@ -368,18 +428,39 @@ const QueueCard = forwardRef<
         initial="hidden"
         animate="visible"
       >
-        {Array.from({ length: items }).map((_, i) => (
-          <motion.div
-            key={i}
-            variants={{
-              hidden: { opacity: 0, scale: 0, y: 4 },
-              visible: { opacity: 1, scale: 1, y: 0 },
-            }}
-            layout
-            transition={{ type: 'spring', stiffness: 400, damping: 25 }}
-            className={`w-3 h-3 rounded-sm ${color}`}
-          />
-        ))}
+        {Array.from({ length: items }).map((_, i) => {
+          if (showRetry && retryTaskIds[i]) {
+            const delay = retryDelays[retryTaskIds[i]] || 0
+            const remaining = Math.max(0, Math.ceil((delay - now) / 1000))
+            return (
+              <motion.div
+                key={retryTaskIds[i]}
+                variants={{
+                  hidden: { opacity: 0, scale: 0, y: 4 },
+                  visible: { opacity: 1, scale: 1, y: 0 },
+                }}
+                layout
+                transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+                className={`min-w-[1.5rem] h-6 rounded-sm ${color} flex items-center justify-center px-1 text-[10px] text-white font-medium`}
+                title={`Retry in ${remaining}s`}
+              >
+                {remaining}s
+              </motion.div>
+            )
+          }
+          return (
+            <motion.div
+              key={i}
+              variants={{
+                hidden: { opacity: 0, scale: 0, y: 4 },
+                visible: { opacity: 1, scale: 1, y: 0 },
+              }}
+              layout
+              transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+              className={`w-3 h-3 rounded-sm ${color}`}
+            />
+          )
+        })}
         {count > items && (
           <span className="text-xs text-slate-400 dark:text-slate-500 ml-1">+{count - items}</span>
         )}
@@ -395,6 +476,11 @@ function WorkerDot({
   simulationSpeed,
   reducedMotion,
   workerRefs,
+  flash,
+  strategy,
+  onKillWorker,
+  onHealWorker,
+  onFailTask,
 }: {
   worker: Worker
   task?: Task
@@ -402,6 +488,11 @@ function WorkerDot({
   simulationSpeed: number
   reducedMotion: boolean
   workerRefs: React.RefObject<Map<string, HTMLDivElement>>
+  flash?: boolean
+  strategy?: LoadBalancingStrategy
+  onKillWorker?: (workerId: string) => void
+  onHealWorker?: (workerId: string) => void
+  onFailTask?: (taskId: string) => void
 }) {
   const isUnhealthy = !worker.healthy
   const progress =
@@ -411,6 +502,7 @@ function WorkerDot({
   const radius = 16
   const circumference = 2 * Math.PI * radius
   const strokeDashoffset = circumference * (1 - progress)
+  const [hovered, setHovered] = useState(false)
 
   const setRef = useCallback(
     (el: HTMLDivElement | null) => {
@@ -422,6 +514,8 @@ function WorkerDot({
   return (
     <motion.div
       ref={setRef}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
       animate={
         reducedMotion
           ? {}
@@ -463,6 +557,52 @@ function WorkerDot({
             strokeLinecap="round"
           />
         </svg>
+      )}
+      {flash && (
+        <motion.span
+          initial={{ opacity: 1, scale: 1 }}
+          animate={{ opacity: 0, scale: 1.6 }}
+          transition={{ duration: 0.6 }}
+          className="absolute inset-0 rounded-md ring-2 ring-sky-400 pointer-events-none"
+        />
+      )}
+      {flash && strategy && (
+        <motion.span
+          initial={{ opacity: 1, y: 0 }}
+          animate={{ opacity: 0, y: -10 }}
+          transition={{ duration: 0.6 }}
+          className="absolute -top-5 left-1/2 -translate-x-1/2 text-[9px] font-bold text-sky-500 bg-slate-900/80 px-1 rounded pointer-events-none whitespace-nowrap"
+        >
+          {strategyLabels[strategy]}
+        </motion.span>
+      )}
+      {hovered && (onKillWorker || onHealWorker || onFailTask) && (
+        <div className="absolute top-full mt-1 left-1/2 -translate-x-1/2 z-20 flex flex-col gap-1">
+          {onKillWorker && worker.healthy && (
+            <button
+              onClick={() => onKillWorker(worker.id)}
+              className="px-2 py-0.5 rounded bg-rose-600 text-white text-[10px] font-medium shadow"
+            >
+              Kill
+            </button>
+          )}
+          {onHealWorker && !worker.healthy && (
+            <button
+              onClick={() => onHealWorker(worker.id)}
+              className="px-2 py-0.5 rounded bg-emerald-600 text-white text-[10px] font-medium shadow"
+            >
+              Heal
+            </button>
+          )}
+          {onFailTask && worker.busy && worker.currentTaskId && (
+            <button
+              onClick={() => onFailTask(worker.currentTaskId!)}
+              className="px-2 py-0.5 rounded bg-amber-600 text-white text-[10px] font-medium shadow"
+            >
+              Fail Task
+            </button>
+          )}
+        </div>
       )}
     </motion.div>
   )

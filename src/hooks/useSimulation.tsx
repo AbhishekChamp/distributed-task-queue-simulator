@@ -169,6 +169,18 @@ export function useSimulation() {
     workerRef.current?.postMessage({ type: 'UPDATE_CONFIG', payload: { config } })
   }, [])
 
+  const killWorker = useCallback((workerId: string) => {
+    workerRef.current?.postMessage({ type: 'KILL_WORKER', payload: { workerId } })
+  }, [])
+
+  const healWorker = useCallback((workerId: string) => {
+    workerRef.current?.postMessage({ type: 'HEAL_WORKER', payload: { workerId } })
+  }, [])
+
+  const failTask = useCallback((taskId: string) => {
+    workerRef.current?.postMessage({ type: 'FAIL_TASK', payload: { taskId } })
+  }, [])
+
   const rewindTo = useCallback((index: number) => {
     setIsRewind(true)
     workerRef.current?.postMessage({ type: 'PAUSE' })
@@ -241,5 +253,8 @@ export function useSimulation() {
     setShowDLQFromToast,
     audioConsent: audio.getConsent(),
     setAudioConsent: audio.setConsent,
+    killWorker,
+    healWorker,
+    failTask,
   }
 }

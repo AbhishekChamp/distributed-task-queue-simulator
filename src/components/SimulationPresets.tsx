@@ -20,6 +20,8 @@ const presets: { label: string; config: SimulationConfig; color: string }[] = [
       durationDistribution: 'uniform',
       enableAutoScaling: false,
       autoScalingQueueThreshold: 50,
+      networkLatencyMs: 0,
+      networkJitterMs: 0,
     },
     color:
       'bg-emerald-100 dark:bg-emerald-600/20 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-200 dark:hover:bg-emerald-600/30',
@@ -39,6 +41,8 @@ const presets: { label: string; config: SimulationConfig; color: string }[] = [
       durationDistribution: 'exponential',
       enableAutoScaling: false,
       autoScalingQueueThreshold: 50,
+      networkLatencyMs: 0,
+      networkJitterMs: 0,
     },
     color:
       'bg-rose-100 dark:bg-rose-600/20 text-rose-700 dark:text-rose-400 hover:bg-rose-200 dark:hover:bg-rose-600/30',
@@ -58,6 +62,8 @@ const presets: { label: string; config: SimulationConfig; color: string }[] = [
       durationDistribution: 'normal',
       enableAutoScaling: true,
       autoScalingQueueThreshold: 40,
+      networkLatencyMs: 0,
+      networkJitterMs: 0,
     },
     color:
       'bg-amber-100 dark:bg-amber-600/20 text-amber-700 dark:text-amber-400 hover:bg-amber-200 dark:hover:bg-amber-600/30',
@@ -77,6 +83,8 @@ const presets: { label: string; config: SimulationConfig; color: string }[] = [
       durationDistribution: 'uniform',
       enableAutoScaling: false,
       autoScalingQueueThreshold: 50,
+      networkLatencyMs: 0,
+      networkJitterMs: 0,
     },
     color:
       'bg-sky-100 dark:bg-sky-600/20 text-sky-700 dark:text-sky-400 hover:bg-sky-200 dark:hover:bg-sky-600/30',

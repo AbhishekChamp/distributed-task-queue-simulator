@@ -46,6 +46,8 @@ export interface SimulationConfig {
   durationDistribution: DurationDistribution
   enableAutoScaling: boolean
   autoScalingQueueThreshold: number
+  networkLatencyMs: number
+  networkJitterMs: number
 }
 
 export interface SimulationMetrics {
@@ -87,6 +89,7 @@ export interface SimulationState {
   events: SimulationEvent[]
   workerUtilization: WorkerUtilization[]
   bottleneck: BottleneckStage
+  retryDelays: Record<string, number>
 }
 
 export interface PersistedSession {
@@ -105,6 +108,7 @@ export interface SimulationPreset {
 
 export type SimulationEventType =
   | 'TASK_CREATED'
+  | 'TASK_ASSIGNED'
   | 'TASK_STARTED'
   | 'TASK_COMPLETED'
   | 'TASK_FAILED'
@@ -125,6 +129,8 @@ export interface SimulationEvent {
   taskId?: string
   workerId?: string
   message?: string
+  strategy?: LoadBalancingStrategy
+  reason?: string
 }
 
 export type EventListener = (event: SimulationEvent) => void

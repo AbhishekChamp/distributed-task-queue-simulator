@@ -174,48 +174,19 @@ export class Scheduler {
       worker.busy = true
       worker.currentTaskId = taskId
       task.status = 'processing'
-      task.startedAt = Date.now()
 
       this.emit({
-        type: 'TASK_STARTED',
+        type: 'TASK_ASSIGNED',
         timestamp: Date.now(),
         taskId: task.id,
         workerId: worker.id,
+        strategy,
+        reason: `Assigned via ${strategy}`,
       })
 
-      processTask(task, worker, this.config).then((result) => {
-        worker.busy = false
-        worker.currentTaskId = undefined
-        task.completedAt = Date.now()
+      this.runTaskWithNetworkDelay(task, worker)
 
-        if (result.throttled) {
-          task.status = 'queued'
-          task.completedAt = undefined
-          this.mainQueue.enqueue(task.id, task.priority)
-          return
-        }
-
-        if (result.success) {
-          task.status = 'success'
-          worker.processedCount += 1
-          worker.consecutiveFailures = 0
-          this.tasksProcessedLastSecond += 1
-          this.emit({
-            type: 'TASK_COMPLETED',
-            timestamp: Date.now(),
-            taskId: task.id,
-            workerId: worker.id,
-          })
-          if (task.batchSize && task.batchSize > 1) {
-            this.spawnBatchTasks(task)
-          }
-        } else {
-          task.status = 'failed'
-          task.error = result.error
-          worker.consecutiveFailures += 1
-          this.handleTaskFailure(task, worker)
-        }
-      })
+      idleWorkers = this.workers.filter((w) => !w.busy && w.healthy)
 
       idleWorkers = this.workers.filter((w) => !w.busy && w.healthy)
     }
@@ -245,7 +216,58 @@ export class Scheduler {
     })
   }
 
-  private handleTaskFailure(task: Task, worker: Worker): void {
+  private async runTaskWithNetworkDelay(task: Task, worker: Worker): Promise<void> {
+    const latency =
+      (this.config.networkLatencyMs || 0) + Math.random() * (this.config.networkJitterMs || 0)
+    if (latency > 0) {
+      await new Promise<void>((resolve) =>
+        setTimeout(resolve, latency / this.config.simulationSpeed),
+      )
+    }
+
+    task.startedAt = Date.now()
+    this.emit({
+      type: 'TASK_STARTED',
+      timestamp: Date.now(),
+      taskId: task.id,
+      workerId: worker.id,
+    })
+
+    const result = await processTask(task, worker, this.config)
+    worker.busy = false
+    worker.currentTaskId = undefined
+    task.completedAt = Date.now()
+
+    if (result.throttled) {
+      task.status = 'queued'
+      task.completedAt = undefined
+      this.mainQueue.enqueue(task.id, task.priority)
+      return
+    }
+
+    if (result.success) {
+      task.status = 'success'
+      worker.processedCount += 1
+      worker.consecutiveFailures = 0
+      this.tasksProcessedLastSecond += 1
+      this.emit({
+        type: 'TASK_COMPLETED',
+        timestamp: Date.now(),
+        taskId: task.id,
+        workerId: worker.id,
+      })
+      if (task.batchSize && task.batchSize > 1) {
+        this.spawnBatchTasks(task)
+      }
+    } else {
+      task.status = 'failed'
+      task.error = result.error
+      worker.consecutiveFailures += 1
+      this.handleTaskFailure(task, worker)
+    }
+  }
+
+  handleTaskFailure(task: Task, worker: Worker): void {
     if (this.config.enableCircuitBreaker && worker.consecutiveFailures >= 3 && worker.healthy) {
       worker.healthy = false
       worker.cooldownUntil = Date.now() + 3000
