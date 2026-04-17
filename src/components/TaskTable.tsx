@@ -7,15 +7,18 @@ import { Filter, X } from './icons'
 interface TaskTableProps {
   tasks: Map<string, Task>
   events?: SimulationEvent[]
+  onCancelTasks?: (taskIds: string[]) => void
+  onRetryTasks?: (taskIds: string[]) => void
 }
 
 const statusOptions: TaskStatus[] = ['queued', 'processing', 'success', 'failed', 'retry', 'dead']
 
-export function TaskTable({ tasks, events = [] }: TaskTableProps) {
+export function TaskTable({ tasks, events = [], onCancelTasks, onRetryTasks }: TaskTableProps) {
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
   const [filter, setFilter] = useState<TaskStatus | 'all'>('all')
   const [showFailedOnly, setShowFailedOnly] = useState(false)
   const [showRetriedOnly, setShowRetriedOnly] = useState(false)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const parentRef = useRef<HTMLDivElement>(null)
   const closeButtonRef = useRef<HTMLButtonElement>(null)
 
@@ -41,6 +44,11 @@ export function TaskTable({ tasks, events = [] }: TaskTableProps) {
     return result.slice().sort((a, b) => b.createdAt - a.createdAt)
   }, [allTasks, filter, showFailedOnly, showRetriedOnly])
 
+  // Clear selections when filter changes to avoid stale selections
+  useEffect(() => {
+    setSelectedIds(new Set())
+  }, [filter, showFailedOnly, showRetriedOnly])
+
   // eslint-disable-next-line react-hooks/incompatible-library
   const virtualizer = useVirtualizer({
     count: filteredTasks.length,
@@ -50,6 +58,62 @@ export function TaskTable({ tasks, events = [] }: TaskTableProps) {
   })
 
   const selectedTask = selectedTaskId ? tasks.get(selectedTaskId) || null : null
+
+  const toggleSelect = (taskId: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(taskId)) next.delete(taskId)
+      else next.add(taskId)
+      return next
+    })
+  }
+
+  const toggleSelectAll = () => {
+    const visibleIds = filteredTasks.map((t) => t.id)
+    const allSelected = visibleIds.every((id) => selectedIds.has(id))
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      if (allSelected) {
+        visibleIds.forEach((id) => next.delete(id))
+      } else {
+        visibleIds.forEach((id) => next.add(id))
+      }
+      return next
+    })
+  }
+
+  const handleExportSelected = () => {
+    const rows = Array.from(selectedIds)
+      .map((id) => tasks.get(id))
+      .filter(Boolean) as Task[]
+    if (rows.length === 0) return
+    const headers = Object.keys(rows[0] as unknown as Record<string, unknown>)
+    const csvRows = [
+      headers.join(','),
+      ...rows.map((row) =>
+        headers
+          .map((h) => {
+            const val = (row as unknown as Record<string, unknown>)[h]
+            const str = val == null ? '' : String(val)
+            return `"${str.replace(/"/g, '""')}"`
+          })
+          .join(','),
+      ),
+    ]
+    const blob = new Blob([csvRows.join('\n')], { type: 'text/csv' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `selected-tasks-${Date.now()}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  const selectedList = Array.from(selectedIds)
+  const canCancel = selectedList.some((id) => tasks.get(id)?.status === 'queued')
+  const canRetry = selectedList.some(
+    (id) => tasks.get(id)?.status === 'failed' || tasks.get(id)?.status === 'dead',
+  )
 
   return (
     <div className="h-full flex flex-col">
@@ -98,6 +162,16 @@ export function TaskTable({ tasks, events = [] }: TaskTableProps) {
       <div ref={parentRef} className="flex-1 overflow-auto">
         <div className="relative w-full" style={{ height: `${virtualizer.getTotalSize()}px` }}>
           <div className="sticky top-0 z-10 flex bg-slate-100/90 dark:bg-slate-900/90 backdrop-blur text-slate-500 dark:text-slate-500 text-xs border-b border-slate-200 dark:border-slate-800">
+            <div className="w-10 px-2 py-2 flex items-center justify-center">
+              <input
+                type="checkbox"
+                checked={
+                  filteredTasks.length > 0 && filteredTasks.every((t) => selectedIds.has(t.id))
+                }
+                onChange={toggleSelectAll}
+                aria-label="Select all visible tasks"
+              />
+            </div>
             <div className="flex-1 px-4 py-2 font-medium min-w-[120px]">ID</div>
             <div className="w-24 px-4 py-2 font-medium">Status</div>
             <div className="w-20 px-4 py-2 font-medium">Retries</div>
@@ -111,6 +185,7 @@ export function TaskTable({ tasks, events = [] }: TaskTableProps) {
           )}
           {virtualizer.getVirtualItems().map((virtualRow) => {
             const task = filteredTasks[virtualRow.index]
+            const isSelected = selectedIds.has(task.id)
             return (
               <div
                 key={task.id}
@@ -121,6 +196,20 @@ export function TaskTable({ tasks, events = [] }: TaskTableProps) {
                   height: `${virtualRow.size}px`,
                 }}
               >
+                <div
+                  className="w-10 px-2 flex items-center justify-center"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    toggleSelect(task.id)
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={isSelected}
+                    onChange={() => toggleSelect(task.id)}
+                    aria-label={`Select task ${task.id.slice(-6)}`}
+                  />
+                </div>
                 <div className="flex-1 px-4 py-2 font-mono text-slate-700 dark:text-slate-300 min-w-[120px] truncate">
                   {task.id.slice(-12)}
                 </div>
@@ -141,6 +230,46 @@ export function TaskTable({ tasks, events = [] }: TaskTableProps) {
           })}
         </div>
       </div>
+
+      {selectedIds.size > 0 && (
+        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 px-3 py-2 rounded-full bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 shadow-lg text-xs">
+          <span className="font-medium">{selectedIds.size} selected</span>
+          {onRetryTasks && canRetry && (
+            <button
+              onClick={() => {
+                onRetryTasks(selectedList)
+                setSelectedIds(new Set())
+              }}
+              className="px-2 py-1 rounded bg-emerald-600 dark:bg-emerald-500 text-white dark:text-white hover:bg-emerald-500 dark:hover:bg-emerald-400 transition"
+            >
+              Retry
+            </button>
+          )}
+          {onCancelTasks && canCancel && (
+            <button
+              onClick={() => {
+                onCancelTasks(selectedList)
+                setSelectedIds(new Set())
+              }}
+              className="px-2 py-1 rounded bg-rose-600 dark:bg-rose-500 text-white dark:text-white hover:bg-rose-500 dark:hover:bg-rose-400 transition"
+            >
+              Cancel
+            </button>
+          )}
+          <button
+            onClick={handleExportSelected}
+            className="px-2 py-1 rounded bg-sky-600 dark:bg-sky-500 text-white dark:text-white hover:bg-sky-500 dark:hover:bg-sky-400 transition"
+          >
+            Export CSV
+          </button>
+          <button
+            onClick={() => setSelectedIds(new Set())}
+            className="px-2 py-1 rounded bg-slate-700 dark:bg-slate-300 text-white dark:text-slate-900 hover:bg-slate-600 dark:hover:bg-slate-200 transition"
+          >
+            Clear
+          </button>
+        </div>
+      )}
 
       {selectedTask && (
         <div

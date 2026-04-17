@@ -100,6 +100,13 @@ export interface PersistedSession {
   events: SimulationEvent[]
 }
 
+export interface Bookmark {
+  id: string
+  name: string
+  createdAt: number
+  snapshot: SimulationState
+}
+
 export interface SimulationPreset {
   name: string
   description: string

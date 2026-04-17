@@ -4,9 +4,19 @@ interface Shortcuts {
   onTogglePlay: () => void
   onReset: () => void
   onAddTasks: (count: number) => void
+  onUndo?: () => void
+  onRedo?: () => void
+  onOpenCommandPalette?: () => void
 }
 
-export function useKeyboardShortcuts({ onTogglePlay, onReset, onAddTasks }: Shortcuts) {
+export function useKeyboardShortcuts({
+  onTogglePlay,
+  onReset,
+  onAddTasks,
+  onUndo,
+  onRedo,
+  onOpenCommandPalette,
+}: Shortcuts) {
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (
@@ -14,6 +24,33 @@ export function useKeyboardShortcuts({ onTogglePlay, onReset, onAddTasks }: Shor
         e.target instanceof HTMLTextAreaElement ||
         e.target instanceof HTMLSelectElement
       ) {
+        // Allow Escape and Cmd+K even inside inputs
+        if (!(e.key === 'Escape' || (e.metaKey && e.key.toLowerCase() === 'k'))) {
+          return
+        }
+      }
+
+      // Command palette
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault()
+        onOpenCommandPalette?.()
+        return
+      }
+
+      // Undo / Redo
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'z') {
+        e.preventDefault()
+        if (e.shiftKey) {
+          onRedo?.()
+        } else {
+          onUndo?.()
+        }
+        return
+      }
+
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'y') {
+        e.preventDefault()
+        onRedo?.()
         return
       }
 
@@ -44,5 +81,5 @@ export function useKeyboardShortcuts({ onTogglePlay, onReset, onAddTasks }: Shor
 
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [onTogglePlay, onReset, onAddTasks])
+  }, [onTogglePlay, onReset, onAddTasks, onUndo, onRedo, onOpenCommandPalette])
 }

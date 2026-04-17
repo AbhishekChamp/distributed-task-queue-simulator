@@ -181,6 +181,14 @@ export function useSimulation() {
     workerRef.current?.postMessage({ type: 'FAIL_TASK', payload: { taskId } })
   }, [])
 
+  const cancelTasks = useCallback((taskIds: string[]) => {
+    workerRef.current?.postMessage({ type: 'CANCEL_TASKS', payload: { taskIds } })
+  }, [])
+
+  const retryTasks = useCallback((taskIds: string[]) => {
+    workerRef.current?.postMessage({ type: 'RETRY_TASKS', payload: { taskIds } })
+  }, [])
+
   const rewindTo = useCallback((index: number) => {
     setIsRewind(true)
     workerRef.current?.postMessage({ type: 'PAUSE' })
@@ -256,5 +264,7 @@ export function useSimulation() {
     killWorker,
     healWorker,
     failTask,
+    cancelTasks,
+    retryTasks,
   }
 }

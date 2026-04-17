@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { Link } from '@tanstack/react-router'
-import { Play, Pause, RotateCcw, Plus, Menu } from './icons'
+import { Play, Pause, RotateCcw, Plus, Menu, Search, Undo, Redo, BookOpen } from './icons'
 import { ThemeToggle } from './ThemeToggle'
 
 interface TopBarProps {
@@ -15,6 +15,12 @@ interface TopBarProps {
   onRestartTour?: () => void
   challengeButton?: ReactNode
   onToggleSidebar?: () => void
+  onOpenCommandPalette?: () => void
+  onOpenGlossary?: () => void
+  canUndo?: boolean
+  canRedo?: boolean
+  onUndo?: () => void
+  onRedo?: () => void
 }
 
 export function TopBar({
@@ -29,6 +35,12 @@ export function TopBar({
   onRestartTour,
   challengeButton,
   onToggleSidebar,
+  onOpenCommandPalette,
+  onOpenGlossary,
+  canUndo,
+  canRedo,
+  onUndo,
+  onRedo,
 }: TopBarProps) {
   return (
     <header
@@ -97,7 +109,61 @@ export function TopBar({
 
         <div className="w-px h-6 bg-slate-300 dark:bg-slate-700 mx-1" aria-hidden="true" />
 
+        {onUndo && (
+          <button
+            onClick={onUndo}
+            disabled={!canUndo}
+            aria-label="Undo config change"
+            title="Undo"
+            className={`p-1.5 rounded-md transition ${
+              canUndo
+                ? 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-700'
+                : 'bg-slate-100 dark:bg-slate-900 text-slate-400 dark:text-slate-600 cursor-not-allowed'
+            }`}
+          >
+            <Undo className="w-4 h-4" />
+          </button>
+        )}
+
+        {onRedo && (
+          <button
+            onClick={onRedo}
+            disabled={!canRedo}
+            aria-label="Redo config change"
+            title="Redo"
+            className={`p-1.5 rounded-md transition ${
+              canRedo
+                ? 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-700'
+                : 'bg-slate-100 dark:bg-slate-900 text-slate-400 dark:text-slate-600 cursor-not-allowed'
+            }`}
+          >
+            <Redo className="w-4 h-4" />
+          </button>
+        )}
+
         {challengeButton}
+
+        {onOpenCommandPalette && (
+          <button
+            onClick={onOpenCommandPalette}
+            aria-label="Open command palette"
+            title="Command Palette (Cmd+K)"
+            className="p-1.5 rounded-md bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-700 transition"
+          >
+            <Search className="w-4 h-4" />
+          </button>
+        )}
+
+        {onOpenGlossary && (
+          <button
+            onClick={onOpenGlossary}
+            aria-label="Open glossary"
+            title="Glossary"
+            className="p-1.5 rounded-md bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-700 transition"
+          >
+            <BookOpen className="w-4 h-4" />
+          </button>
+        )}
 
         {onRestartTour && (
           <button

@@ -70,5 +70,15 @@ self.onmessage = (e: MessageEvent) => {
       broadcastState()
       break
     }
+    case 'CANCEL_TASKS': {
+      engine?.cancelTasks(payload?.taskIds || [])
+      broadcastState()
+      break
+    }
+    case 'RETRY_TASKS': {
+      engine?.retryTasks(payload?.taskIds || [])
+      broadcastState()
+      break
+    }
   }
 }

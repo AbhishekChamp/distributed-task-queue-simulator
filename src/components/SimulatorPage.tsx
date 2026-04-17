@@ -3,6 +3,7 @@ import { useSimulation } from '../hooks/useSimulation.tsx'
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts'
 import { useFullscreen } from '../hooks/useFullscreen'
 import { useShareableUrl } from '../hooks/useShareableUrl'
+import { useConfigHistory } from '../hooks/useConfigHistory'
 import { TopBar } from './TopBar'
 import { ControlPanel } from './ControlPanel'
 import { Visualization } from './Visualization'
@@ -13,6 +14,9 @@ import { useChallenges } from '../hooks/useChallenges'
 import { ChallengesButton, ChallengesPanel } from './ScenarioChallenges'
 import { StepThroughDebugger } from './StepThroughDebugger'
 import { BottomSheet } from './BottomSheet'
+import { CommandPalette } from './CommandPalette'
+import { GlossaryDrawer } from './GlossaryDrawer'
+import type { SimulationConfig } from '../types'
 import toast from 'react-hot-toast'
 
 const MetricsPanel = lazy(() => import('./MetricsPanel').then((m) => ({ default: m.MetricsPanel })))
@@ -57,11 +61,15 @@ export function SimulatorPage() {
     killWorker,
     healWorker,
     failTask,
+    cancelTasks,
+    retryTasks,
   } = useSimulation()
   const [bottomTab, setBottomTab] = useState<'tasks' | 'events' | 'debug'>('tasks')
   const [showDLQ, setShowDLQ] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [metricsSheetOpen, setMetricsSheetOpen] = useState(false)
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false)
+  const [glossaryOpen, setGlossaryOpen] = useState(false)
   const { isFullscreen, toggle: toggleFullscreen } = useFullscreen()
 
   const tour = useGuidedTour()
@@ -101,8 +109,7 @@ export function SimulatorPage() {
       lastEvent.type === 'ALL_TASKS_COMPLETED'
     ) {
       const msg = lastEvent.message || lastEvent.type
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setLiveMessage(msg)
+      queueMicrotask(() => setLiveMessage(msg))
       const t = setTimeout(() => setLiveMessage(''), 1000)
       return () => clearTimeout(t)
     }
@@ -110,13 +117,27 @@ export function SimulatorPage() {
 
   useShareableUrl(state.config)
 
+  const { push: pushConfigHistory, undo, redo, canUndo, canRedo } = useConfigHistory(updateConfig)
+
+  const handleUpdateConfig = useCallback(
+    (patch: Partial<SimulationConfig>) => {
+      const next = { ...state.config, ...patch }
+      pushConfigHistory(next)
+      updateConfig(patch)
+    },
+    [state.config, pushConfigHistory, updateConfig],
+  )
+
   const shortcuts = useMemo(
     () => ({
       onTogglePlay: () => (state.isRunning ? pause() : start()),
       onReset: reset,
       onAddTasks: addTasks,
+      onUndo: undo,
+      onRedo: redo,
+      onOpenCommandPalette: () => setCommandPaletteOpen(true),
     }),
-    [state.isRunning, pause, start, reset, addTasks],
+    [state.isRunning, pause, start, reset, addTasks, undo, redo],
   )
 
   useKeyboardShortcuts(shortcuts)
@@ -125,6 +146,98 @@ export function SimulatorPage() {
     navigator.clipboard.writeText(window.location.href)
     toast.success('URL copied to clipboard')
   }, [])
+
+  const commandPaletteCommands = useMemo(
+    () => [
+      {
+        id: 'start',
+        label: state.isRunning ? 'Pause Simulation' : 'Start Simulation',
+        shortcut: 'Space',
+        action: () => (state.isRunning ? pause() : start()),
+      },
+      { id: 'reset', label: 'Reset Simulation', shortcut: 'R', action: reset },
+      { id: 'dlq', label: 'Open DLQ Inspector', action: () => setShowDLQ(true) },
+      {
+        id: 'steady',
+        label: 'Apply Preset: Steady State',
+        action: () => {
+          handleUpdateConfig({
+            workerCount: 4,
+            failureProbability: 5,
+            maxRetries: 2,
+            simulationSpeed: 1,
+            baseProcessingTime: 800,
+            maxQueueCapacity: 200,
+            loadBalancingStrategy: 'round-robin',
+            enableCircuitBreaker: true,
+            maxTasksPerSecondPerWorker: 0,
+            durationDistribution: 'uniform',
+            enableAutoScaling: false,
+            autoScalingQueueThreshold: 50,
+            networkLatencyMs: 0,
+            networkJitterMs: 0,
+          })
+          toast.success('Preset applied: Steady State')
+        },
+      },
+      {
+        id: 'chaos',
+        label: 'Apply Preset: Chaos Mode',
+        action: () => {
+          handleUpdateConfig({
+            workerCount: 6,
+            failureProbability: 60,
+            maxRetries: 5,
+            simulationSpeed: 2,
+            baseProcessingTime: 500,
+            maxQueueCapacity: 300,
+            loadBalancingStrategy: 'random',
+            enableCircuitBreaker: true,
+            maxTasksPerSecondPerWorker: 0,
+            durationDistribution: 'exponential',
+            enableAutoScaling: false,
+            autoScalingQueueThreshold: 50,
+            networkLatencyMs: 0,
+            networkJitterMs: 0,
+          })
+          toast.success('Preset applied: Chaos Mode')
+        },
+      },
+      {
+        id: 'glossary',
+        label: 'Open Glossary',
+        action: () => setGlossaryOpen(true),
+      },
+      {
+        id: 'fullscreen',
+        label: isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen',
+        action: toggleFullscreen,
+      },
+      {
+        id: 'theme',
+        label: 'Toggle Theme',
+        action: () => {
+          const html = document.documentElement
+          const isDark = html.classList.contains('dark')
+          if (isDark) html.classList.remove('dark')
+          else html.classList.add('dark')
+        },
+      },
+    ],
+    [state.isRunning, pause, start, reset, handleUpdateConfig, isFullscreen, toggleFullscreen],
+  )
+
+  const bottleneckMetrics = useMemo(
+    () => ({
+      queued: state.metrics.queued,
+      activeWorkers: state.metrics.activeWorkers,
+      workerCount: state.config.workerCount,
+      maxQueueCapacity: state.config.maxQueueCapacity,
+      tasksPerSecond: state.metrics.tasksPerSecond,
+      baseProcessingTime: state.config.baseProcessingTime,
+    }),
+    [state.metrics, state.config],
+  )
 
   return (
     <div className="flex flex-col h-screen bg-white dark:bg-slate-950 text-slate-800 dark:text-slate-200 overflow-hidden">
@@ -148,9 +261,20 @@ export function SimulatorPage() {
         challengeButton={
           <ChallengesButton completedCount={completedCount} onClick={() => setShowPanel(true)} />
         }
+        onOpenCommandPalette={() => setCommandPaletteOpen(true)}
+        onOpenGlossary={() => setGlossaryOpen(true)}
+        canUndo={canUndo}
+        canRedo={canRedo}
+        onUndo={undo}
+        onRedo={redo}
       />
 
-      <BottleneckAlert id="bottleneck-alert" stage={state.bottleneck} />
+      <BottleneckAlert
+        id="bottleneck-alert"
+        stage={state.bottleneck}
+        metrics={bottleneckMetrics}
+        onApplyFix={handleUpdateConfig}
+      />
 
       <div className={`flex flex-1 overflow-hidden ${isFullscreen ? 'fullscreen-demo' : ''}`}>
         <aside
@@ -161,7 +285,7 @@ export function SimulatorPage() {
         >
           <ControlPanel
             config={state.config}
-            onChange={updateConfig}
+            onChange={handleUpdateConfig}
             onAddBatch={addBatch}
             snapshotsCount={snapshotsCount}
             rewindTo={rewindTo}
@@ -278,7 +402,12 @@ export function SimulatorPage() {
             >
               <Suspense fallback={<PanelSkeleton />}>
                 {bottomTab === 'tasks' ? (
-                  <TaskTable tasks={state.tasks} events={state.events} />
+                  <TaskTable
+                    tasks={state.tasks}
+                    events={state.events}
+                    onCancelTasks={cancelTasks}
+                    onRetryTasks={retryTasks}
+                  />
                 ) : bottomTab === 'events' ? (
                   <EventLog events={state.events} />
                 ) : (
@@ -340,6 +469,14 @@ export function SimulatorPage() {
           onReset={resetProgress}
         />
       )}
+
+      <CommandPalette
+        isOpen={commandPaletteOpen}
+        onClose={() => setCommandPaletteOpen(false)}
+        commands={commandPaletteCommands}
+      />
+
+      <GlossaryDrawer isOpen={glossaryOpen} onClose={() => setGlossaryOpen(false)} />
 
       <div aria-live="assertive" aria-atomic="true" className="sr-only">
         {liveMessage}

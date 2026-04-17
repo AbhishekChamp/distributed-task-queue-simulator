@@ -366,6 +366,29 @@ export class SimulationEngine {
     }
   }
 
+  cancelTasks(taskIds: string[]): void {
+    for (const taskId of taskIds) {
+      const task = this.tasks.get(taskId)
+      if (task && task.status === 'queued') {
+        this.mainQueue.remove(taskId)
+        this.tasks.delete(taskId)
+      }
+    }
+  }
+
+  retryTasks(taskIds: string[]): void {
+    for (const taskId of taskIds) {
+      const task = this.tasks.get(taskId)
+      if (task && (task.status === 'failed' || task.status === 'dead')) {
+        task.status = 'queued'
+        task.retryCount = 0
+        task.error = undefined
+        this.mainQueue.enqueue(taskId, task.priority)
+        this.deadLetterQueue.remove(taskId)
+      }
+    }
+  }
+
   onEvent(listener: (event: SimulationEvent) => void): () => void {
     return this.eventBus.on('*', listener)
   }
