@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import type { SimulationState } from '../types'
+import type { SimulationState, Bookmark } from '../types'
 import { setSimulationState } from '../store/useSimulationStore'
 import { saveBookmark, loadBookmarks, deleteBookmark } from '../lib/indexeddb'
-import type { Bookmark } from '../types'
+import { useFocusTrap } from '../hooks/useFocusTrap'
 
 interface SessionReplayProps {
   snapshots: SimulationState[]
@@ -16,6 +16,7 @@ export function SessionReplay({ snapshots, onClose }: SessionReplayProps) {
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const [bookmarks, setBookmarks] = useState<Bookmark[]>([])
   const [bookmarkName, setBookmarkName] = useState('')
+  const containerRef = useFocusTrap(true, onClose)
 
   const refreshBookmarks = useCallback(async () => {
     const list = await loadBookmarks()
@@ -72,7 +73,10 @@ export function SessionReplay({ snapshots, onClose }: SessionReplayProps) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 dark:bg-black/60 p-4">
+    <div
+      ref={containerRef}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 dark:bg-black/60 p-4"
+    >
       <div className="w-full max-w-xl rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-2xl p-4 space-y-4 max-h-[90vh] overflow-auto">
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">

@@ -27,6 +27,20 @@ const profileColors: Record<WorkerProfile, string> = {
   unreliable: 'bg-rose-400',
 }
 
+const profileShapes: Record<WorkerProfile, string> = {
+  fast: 'rounded-full',
+  normal: 'rounded-sm',
+  slow: 'rotate-45 rounded-sm scale-75',
+  unreliable: 'clip-triangle',
+}
+
+const profileLabels: Record<WorkerProfile, string> = {
+  fast: '⚡',
+  normal: '●',
+  slow: '🐢',
+  unreliable: '⚠',
+}
+
 const strategyLabels: Record<LoadBalancingStrategy, string> = {
   'round-robin': 'RR',
   'least-connections': 'LC',
@@ -199,27 +213,36 @@ export function Visualization({
             </span>
           </div>
           <div
-            className="h-3 w-full rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden flex"
+            className="h-4 w-full rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden flex text-[8px] text-white font-bold"
             aria-label={`Priority distribution: ${priorityCounts.high} high, ${priorityCounts.medium} medium, ${priorityCounts.low} low`}
             role="img"
           >
             {priorityCounts.high > 0 && (
               <div
-                className="bg-rose-500 h-full"
+                className="bg-rose-500 h-full flex items-center justify-center"
                 style={{ width: `${(priorityCounts.high / mainQueue.length) * 100}%` }}
-              />
+                title="High priority"
+              >
+                ★
+              </div>
             )}
             {priorityCounts.medium > 0 && (
               <div
-                className="bg-amber-500 h-full"
+                className="bg-amber-500 h-full flex items-center justify-center"
                 style={{ width: `${(priorityCounts.medium / mainQueue.length) * 100}%` }}
-              />
+                title="Medium priority"
+              >
+                ●
+              </div>
             )}
             {priorityCounts.low > 0 && (
               <div
-                className="bg-emerald-500 h-full"
+                className="bg-emerald-500 h-full flex items-center justify-center"
                 style={{ width: `${(priorityCounts.low / mainQueue.length) * 100}%` }}
-              />
+                title="Low priority"
+              >
+                ○
+              </div>
             )}
           </div>
         </div>
@@ -534,9 +557,12 @@ function WorkerDot({
     >
       {worker.id.split('-')[1]}
       <span
-        className={`absolute -top-1 -right-1 w-3 h-3 rounded-full border-2 border-white dark:border-slate-900 ${profileColors[worker.profile]}`}
+        className={`absolute -top-1 -right-1 w-3 h-3 border-2 border-white dark:border-slate-900 flex items-center justify-center text-[6px] leading-none ${profileColors[worker.profile]} ${profileShapes[worker.profile]}`}
         aria-hidden="true"
-      />
+        title={worker.profile}
+      >
+        {profileLabels[worker.profile]}
+      </span>
       {isUnhealthy && (
         <span className="absolute -bottom-1 text-[8px] text-rose-600 font-bold">CB</span>
       )}

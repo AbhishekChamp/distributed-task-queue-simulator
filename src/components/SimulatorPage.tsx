@@ -4,6 +4,8 @@ import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts'
 import { useFullscreen } from '../hooks/useFullscreen'
 import { useShareableUrl } from '../hooks/useShareableUrl'
 import { useConfigHistory } from '../hooks/useConfigHistory'
+import { useAutoSave, loadCrashRecovery, clearCrashRecovery } from '../hooks/useAutoSave'
+import { useViewTransition } from '../hooks/useViewTransition'
 import { TopBar } from './TopBar'
 import { ControlPanel } from './ControlPanel'
 import { Visualization } from './Visualization'
@@ -16,6 +18,7 @@ import { StepThroughDebugger } from './StepThroughDebugger'
 import { BottomSheet } from './BottomSheet'
 import { CommandPalette } from './CommandPalette'
 import { GlossaryDrawer } from './GlossaryDrawer'
+import { setSimulationState } from '../store/useSimulationStore'
 import type { SimulationConfig } from '../types'
 import toast from 'react-hot-toast'
 
@@ -71,6 +74,7 @@ export function SimulatorPage() {
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false)
   const [glossaryOpen, setGlossaryOpen] = useState(false)
   const { isFullscreen, toggle: toggleFullscreen } = useFullscreen()
+  const withTransition = useViewTransition()
 
   const tour = useGuidedTour()
   const challengeState = useChallenges(state.metrics, state.config)
@@ -85,6 +89,39 @@ export function SimulatorPage() {
   } = challengeState
   const wasRunningRef = useRef(state.isRunning)
   const [liveMessage, setLiveMessage] = useState('')
+
+  useAutoSave(state, 5000)
+
+  useEffect(() => {
+    const recovered = loadCrashRecovery()
+    if (recovered && recovered.tasks && recovered.tasks.size > 0) {
+      toast(
+        <div className="flex flex-col gap-1">
+          <span>Crash recovery session found</span>
+          <button
+            onClick={() => {
+              setSimulationState({ ...recovered, isRunning: false })
+              clearCrashRecovery()
+              toast.success('Session restored')
+            }}
+            className="text-left text-xs underline text-slate-300 hover:text-white"
+          >
+            Restore Session
+          </button>
+          <button
+            onClick={() => {
+              clearCrashRecovery()
+              toast.success('Recovered session discarded')
+            }}
+            className="text-left text-xs underline text-slate-300 hover:text-white"
+          >
+            Discard
+          </button>
+        </div>,
+        { duration: 10000, id: 'crash-recovery' },
+      )
+    }
+  }, [])
 
   useEffect(() => {
     if (wasRunningRef.current && !state.isRunning) {
@@ -128,6 +165,20 @@ export function SimulatorPage() {
     [state.config, pushConfigHistory, updateConfig],
   )
 
+  const setBottomTabWithTransition = useCallback(
+    (tab: 'tasks' | 'events' | 'debug') => {
+      withTransition(() => setBottomTab(tab))
+    },
+    [withTransition],
+  )
+
+  const setShowDLQWithTransition = useCallback(
+    (val: boolean) => {
+      withTransition(() => setShowDLQ(val))
+    },
+    [withTransition],
+  )
+
   const shortcuts = useMemo(
     () => ({
       onTogglePlay: () => (state.isRunning ? pause() : start()),
@@ -156,7 +207,7 @@ export function SimulatorPage() {
         action: () => (state.isRunning ? pause() : start()),
       },
       { id: 'reset', label: 'Reset Simulation', shortcut: 'R', action: reset },
-      { id: 'dlq', label: 'Open DLQ Inspector', action: () => setShowDLQ(true) },
+      { id: 'dlq', label: 'Open DLQ Inspector', action: () => setShowDLQWithTransition(true) },
       {
         id: 'steady',
         label: 'Apply Preset: Steady State',
@@ -206,7 +257,7 @@ export function SimulatorPage() {
       {
         id: 'glossary',
         label: 'Open Glossary',
-        action: () => setGlossaryOpen(true),
+        action: () => withTransition(() => setGlossaryOpen(true)),
       },
       {
         id: 'fullscreen',
@@ -224,7 +275,17 @@ export function SimulatorPage() {
         },
       },
     ],
-    [state.isRunning, pause, start, reset, handleUpdateConfig, isFullscreen, toggleFullscreen],
+    [
+      state.isRunning,
+      pause,
+      start,
+      reset,
+      handleUpdateConfig,
+      isFullscreen,
+      toggleFullscreen,
+      setShowDLQWithTransition,
+      withTransition,
+    ],
   )
 
   const bottleneckMetrics = useMemo(
@@ -262,7 +323,7 @@ export function SimulatorPage() {
           <ChallengesButton completedCount={completedCount} onClick={() => setShowPanel(true)} />
         }
         onOpenCommandPalette={() => setCommandPaletteOpen(true)}
-        onOpenGlossary={() => setGlossaryOpen(true)}
+        onOpenGlossary={() => withTransition(() => setGlossaryOpen(true))}
         canUndo={canUndo}
         canRedo={canRedo}
         onUndo={undo}
@@ -301,7 +362,7 @@ export function SimulatorPage() {
           <div className="flex-1 flex overflow-hidden">
             <div
               id="pipeline-section"
-              className="flex-1 p-6 overflow-y-auto"
+              className="@container flex-1 p-6 overflow-y-auto"
               role="region"
               aria-label="Simulation visualization"
             >
@@ -325,7 +386,7 @@ export function SimulatorPage() {
               <>
                 <aside
                   id="metrics-panel"
-                  className="hidden lg:block w-80 border-l border-slate-200 dark:border-slate-800 bg-slate-100/80 dark:bg-slate-900/50 overflow-y-auto"
+                  className="@container hidden lg:block w-80 border-l border-slate-200 dark:border-slate-800 bg-slate-100/80 dark:bg-slate-900/50 overflow-y-auto"
                 >
                   <Suspense fallback={<PanelSkeleton />}>
                     <MetricsPanel
@@ -356,7 +417,7 @@ export function SimulatorPage() {
           >
             <div className="flex items-center gap-1 px-4 border-b border-slate-200 dark:border-slate-800">
               <button
-                onClick={() => setBottomTab('tasks')}
+                onClick={() => setBottomTabWithTransition('tasks')}
                 className={`px-3 py-2 text-xs font-semibold uppercase tracking-wider transition ${
                   bottomTab === 'tasks'
                     ? 'text-sky-600 dark:text-sky-400 border-b-2 border-sky-600 dark:border-sky-400'
@@ -366,7 +427,7 @@ export function SimulatorPage() {
                 Tasks
               </button>
               <button
-                onClick={() => setBottomTab('events')}
+                onClick={() => setBottomTabWithTransition('events')}
                 className={`px-3 py-2 text-xs font-semibold uppercase tracking-wider transition ${
                   bottomTab === 'events'
                     ? 'text-sky-600 dark:text-sky-400 border-b-2 border-sky-600 dark:border-sky-400'
@@ -376,7 +437,7 @@ export function SimulatorPage() {
                 Event Log
               </button>
               <button
-                onClick={() => setBottomTab('debug')}
+                onClick={() => setBottomTabWithTransition('debug')}
                 className={`px-3 py-2 text-xs font-semibold uppercase tracking-wider transition ${
                   bottomTab === 'debug'
                     ? 'text-sky-600 dark:text-sky-400 border-b-2 border-sky-600 dark:border-sky-400'
@@ -387,7 +448,7 @@ export function SimulatorPage() {
               </button>
               <div className="flex-1" />
               <button
-                onClick={() => setShowDLQ(true)}
+                onClick={() => setShowDLQWithTransition(true)}
                 aria-label="Open Dead Letter Queue Inspector"
                 className="px-3 py-2 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 transition"
               >

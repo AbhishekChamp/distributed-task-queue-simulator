@@ -19,6 +19,7 @@ import {
 } from '../lib/csvExport'
 import { saveSession, loadSessions, deleteSession } from '../lib/indexeddb'
 import { SessionReplay } from './SessionReplay'
+import { WorkerHeatmapCanvas } from './WorkerHeatmapCanvas'
 
 interface MetricsPanelProps {
   metrics: SimulationMetrics
@@ -262,31 +263,8 @@ export function MetricsPanel({
           <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-500 mb-2">
             Worker Heatmap
           </h3>
-          <div className="space-y-1">
-            {workerUtilization.map((worker) => (
-              <div key={worker.workerId} className="flex items-center gap-2">
-                <span className="text-[10px] font-mono w-10 text-slate-600 dark:text-slate-400">
-                  {worker.workerId}
-                </span>
-                <div className="flex-1 flex gap-px h-3">
-                  {worker.history.map((status, i) => (
-                    <div
-                      key={i}
-                      className={`flex-1 rounded-sm ${
-                        status === 'busy'
-                          ? 'bg-amber-500'
-                          : status === 'unhealthy'
-                            ? 'bg-rose-500'
-                            : 'bg-slate-300 dark:bg-slate-700'
-                      }`}
-                    />
-                  ))}
-                  {worker.history.length === 0 && (
-                    <div className="flex-1 rounded-sm bg-slate-200 dark:bg-slate-800" />
-                  )}
-                </div>
-              </div>
-            ))}
+          <div className="rounded-md border border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-950/50 p-2">
+            <WorkerHeatmapCanvas utilization={workerUtilization} />
           </div>
           <div className="flex items-center gap-2 mt-1 text-[9px] text-slate-500 dark:text-slate-400">
             <span className="flex items-center gap-0.5">

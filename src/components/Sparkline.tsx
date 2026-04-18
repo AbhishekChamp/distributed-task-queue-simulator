@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { useReducedMotion } from '../hooks/useReducedMotion'
 
 interface SparklineProps {
   data: number[]
@@ -23,8 +24,19 @@ export function Sparkline({
 }: SparklineProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [hoverX, setHoverX] = useState<number | null>(null)
+  const reducedMotion = useReducedMotion()
+  const lastDataRef = useRef<number[]>([])
 
   useEffect(() => {
+    if (reducedMotion) {
+      // Only redraw if data length changed significantly (new point added)
+      const last = lastDataRef.current
+      if (last.length > 0 && data.length === last.length && data.every((v, i) => v === last[i])) {
+        return
+      }
+    }
+    lastDataRef.current = [...data]
+
     const canvas = canvasRef.current
     if (!canvas || data.length < 2) return
     const ctx = canvas.getContext('2d')
@@ -57,7 +69,7 @@ export function Sparkline({
     ctx.strokeStyle = color
     ctx.stroke()
 
-    if (fill) {
+    if (fill && !reducedMotion) {
       ctx.lineTo(getX(data.length - 1), height)
       ctx.lineTo(getX(0), height)
       ctx.closePath()
@@ -68,7 +80,7 @@ export function Sparkline({
       ctx.fill()
     }
 
-    if (hoverX != null) {
+    if (hoverX != null && !reducedMotion) {
       ctx.strokeStyle = '#ffffff'
       ctx.lineWidth = 1
       ctx.beginPath()
@@ -76,10 +88,10 @@ export function Sparkline({
       ctx.lineTo(hoverX, height)
       ctx.stroke()
     }
-  }, [data, width, height, color, fill, hoverX])
+  }, [data, width, height, color, fill, hoverX, reducedMotion])
 
   const handleMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!onScrub || data.length < 2) return
+    if (!onScrub || data.length < 2 || reducedMotion) return
     const rect = e.currentTarget.getBoundingClientRect()
     const x = e.clientX - rect.left
     const pad = 2
@@ -99,7 +111,7 @@ export function Sparkline({
   return (
     <canvas
       ref={canvasRef}
-      className="block cursor-crosshair"
+      className={`block ${reducedMotion ? '' : 'cursor-crosshair'}`}
       aria-label={ariaLabel}
       role="img"
       onMouseMove={handleMove}

@@ -1,5 +1,6 @@
 import { challenges } from '../hooks/useChallenges'
 import type { ChallengeProgress } from '../hooks/useChallenges'
+import { useFocusTrap } from '../hooks/useFocusTrap'
 
 export type { ChallengeProgress }
 
@@ -36,8 +37,10 @@ export function ChallengesPanel({
   onClose: () => void
   onReset: () => void
 }) {
+  const containerRef = useFocusTrap(true, onClose)
   return (
     <div
+      ref={containerRef}
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 dark:bg-black/60 p-4"
       role="dialog"
       aria-modal="true"

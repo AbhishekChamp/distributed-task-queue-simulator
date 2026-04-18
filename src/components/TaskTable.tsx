@@ -3,6 +3,7 @@ import { useVirtualizer } from '@tanstack/react-virtual'
 import type { SimulationEvent, Task, TaskStatus } from '../types'
 import { TaskDetail } from './TaskDetail'
 import { Filter, X } from './icons'
+import { useFocusTrap } from '../hooks/useFocusTrap'
 
 interface TaskTableProps {
   tasks: Map<string, Task>
@@ -58,6 +59,7 @@ export function TaskTable({ tasks, events = [], onCancelTasks, onRetryTasks }: T
   })
 
   const selectedTask = selectedTaskId ? tasks.get(selectedTaskId) || null : null
+  const taskDetailTrapRef = useFocusTrap(!!selectedTask, () => setSelectedTaskId(null))
 
   const toggleSelect = (taskId: string) => {
     setSelectedIds((prev) => {
@@ -273,6 +275,7 @@ export function TaskTable({ tasks, events = [], onCancelTasks, onRetryTasks }: T
 
       {selectedTask && (
         <div
+          ref={taskDetailTrapRef}
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 dark:bg-black/60 p-4"
           role="dialog"
           aria-modal="true"

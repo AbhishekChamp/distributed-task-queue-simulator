@@ -1,6 +1,7 @@
-import { useMemo, useRef, useEffect } from 'react'
+import { useMemo } from 'react'
 import type { Task } from '../types'
 import { X } from './icons'
+import { useFocusTrap } from '../hooks/useFocusTrap'
 
 interface DLQInspectorProps {
   tasks: Map<string, Task>
@@ -9,11 +10,7 @@ interface DLQInspectorProps {
 }
 
 export function DLQInspector({ tasks, deadLetterQueue, onClose }: DLQInspectorProps) {
-  const closeButtonRef = useRef<HTMLButtonElement>(null)
-
-  useEffect(() => {
-    closeButtonRef.current?.focus()
-  }, [])
+  const containerRef = useFocusTrap(true, onClose)
 
   const deadTasks = useMemo(() => {
     return deadLetterQueue
@@ -34,6 +31,7 @@ export function DLQInspector({ tasks, deadLetterQueue, onClose }: DLQInspectorPr
 
   return (
     <div
+      ref={containerRef}
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 dark:bg-black/60 p-4"
       role="dialog"
       aria-modal="true"
@@ -48,7 +46,6 @@ export function DLQInspector({ tasks, deadLetterQueue, onClose }: DLQInspectorPr
             Dead Letter Queue Inspector
           </h3>
           <button
-            ref={closeButtonRef}
             onClick={onClose}
             aria-label="Close Dead Letter Queue Inspector"
             className="text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200"
