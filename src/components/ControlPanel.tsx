@@ -88,34 +88,45 @@ export function ControlPanel({
             </ControlRow>
           </Tooltip>
 
-          <Tooltip content="How many times a failed task will be retried before moving to the DLQ.">
-            <ControlRow label="Max Retries" value={`${config.maxRetries ?? 3}`}>
-              <input
-                type="number"
-                min={0}
-                max={10}
-                value={config.maxRetries ?? 3}
-                onChange={(e) => onChange({ maxRetries: Number(e.target.value) })}
-                className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded px-2 py-1 text-sm text-slate-800 dark:text-slate-200"
-                aria-label="Maximum retries"
-              />
-            </ControlRow>
-          </Tooltip>
+          <div className="pt-2 border-t border-slate-200 dark:border-slate-800">
+            <h3 className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-600 mb-2">
+              Retry & Timing
+            </h3>
+            <div className="space-y-4">
+              <Tooltip content="How many times a failed task will be retried before moving to the DLQ.">
+                <ControlRow label="Max Retries" value={`${config.maxRetries ?? 3}`} stacked>
+                  <input
+                    type="number"
+                    min={0}
+                    max={10}
+                    value={config.maxRetries ?? 3}
+                    onChange={(e) => onChange({ maxRetries: Number(e.target.value) })}
+                    className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded px-2 py-1 text-sm text-slate-800 dark:text-slate-200"
+                    aria-label="Maximum retries"
+                  />
+                </ControlRow>
+              </Tooltip>
 
-          <Tooltip content="Multiplier for how fast simulated time progresses.">
-            <ControlRow label="Simulation Speed" value={`${config.simulationSpeed ?? 1}x`}>
-              <input
-                type="range"
-                min={1}
-                max={10}
-                step={0.5}
-                value={config.simulationSpeed ?? 1}
-                onChange={(e) => onChange({ simulationSpeed: Number(e.target.value) })}
-                className="w-full accent-emerald-500"
-                aria-label="Simulation speed multiplier"
-              />
-            </ControlRow>
-          </Tooltip>
+              <Tooltip content="Multiplier for how fast simulated time progresses.">
+                <ControlRow
+                  label="Simulation Speed"
+                  value={`${config.simulationSpeed ?? 1}x`}
+                  stacked
+                >
+                  <input
+                    type="range"
+                    min={1}
+                    max={10}
+                    step={0.5}
+                    value={config.simulationSpeed ?? 1}
+                    onChange={(e) => onChange({ simulationSpeed: Number(e.target.value) })}
+                    className="w-full accent-emerald-500"
+                    aria-label="Simulation speed multiplier"
+                  />
+                </ControlRow>
+              </Tooltip>
+            </div>
+          </div>
 
           <Tooltip content="Maximum number of tasks the main queue can hold before backpressure drops new tasks.">
             <ControlRow label="Queue Capacity" value={`${config.maxQueueCapacity ?? 200}`}>
@@ -355,17 +366,26 @@ function ControlRow({
   label,
   value,
   children,
+  stacked = false,
 }: {
   label: string
   value: string
   children: React.ReactNode
+  stacked?: boolean
 }) {
   return (
     <div className="space-y-1">
-      <div className="flex items-center justify-between text-sm">
-        <span className="text-slate-600 dark:text-slate-400">{label}</span>
-        <span className="font-mono text-slate-800 dark:text-slate-200">{value}</span>
-      </div>
+      {stacked ? (
+        <div className="text-sm">
+          <div className="text-slate-600 dark:text-slate-400">{label}</div>
+          <div className="font-mono text-slate-800 dark:text-slate-200">{value}</div>
+        </div>
+      ) : (
+        <div className="flex items-center justify-between text-sm">
+          <span className="text-slate-600 dark:text-slate-400">{label}</span>
+          <span className="font-mono text-slate-800 dark:text-slate-200">{value}</span>
+        </div>
+      )}
       {children}
     </div>
   )

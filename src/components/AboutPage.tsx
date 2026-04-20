@@ -159,7 +159,7 @@ export function AboutPage() {
             <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
               This project is open source and available on{' '}
               <a
-                href="https://github.com/abhishekr/distributed-task-queue-simulator"
+                href="https://github.com/AbhishekChamp/distributed-task-queue-simulator"
                 target="_blank"
                 rel="noreferrer"
                 className="text-sky-600 dark:text-sky-400 hover:underline"

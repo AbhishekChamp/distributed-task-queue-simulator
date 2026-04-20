@@ -2,11 +2,11 @@
 
 A **production-grade, browser-based simulator** for distributed task queues. Experience how real-world systems like Celery, RabbitMQ, and AWS SQS handle concurrency, backpressure, retries, circuit breakers, and dead-letter queues — all running smoothly at 60fps in your browser.
 
-[![CI/CD](https://github.com/abhishekr/distributed-task-queue-simulator/actions/workflows/ci.yml/badge.svg)](https://github.com/abhishekr/distributed-task-queue-simulator/actions/workflows/ci.yml)
+[![CI/CD](https://github.com/AbhishekChamp/distributed-task-queue-simulator/actions/workflows/ci.yml/badge.svg)](https://github.com/AbhishekChamp/distributed-task-queue-simulator/actions/workflows/ci.yml)
 [![Stack](https://img.shields.io/badge/stack-React%2019%20%2B%20Vite%20%2B%20TypeScript-blue)](https://react.dev/)
 [![Tests](https://img.shields.io/badge/tests-Vitest%20%2B%20RTL-green)]()
 
-> 🚀 **[Live Demo](https://abhishekr.github.io/distributed-task-queue-simulator/)**
+> 🚀 **[Live Demo]()**
 
 ![Demo Placeholder](./docs/demo.gif) <!-- Replace with actual GIF or view [docs/showcase.md](./docs/showcase.md) for detailed walkthrough -->
 
@@ -23,6 +23,7 @@ A **production-grade, browser-based simulator** for distributed task queues. Exp
 - [Project Structure](#project-structure)
 - [Testing](#testing)
 - [CI/CD](#cicd)
+- [Deploy to Netlify](#deploy-to-netlify)
 - [Lessons Learned](#lessons-learned)
 - [Future Enhancements](#future-enhancements)
 - [License](#license)
@@ -190,7 +191,7 @@ Recorded on Chrome 123, M2 MacBook Air:
 
 ```bash
 # Clone the repository
-git clone https://github.com/abhishekr/distributed-task-queue-simulator.git
+git clone https://github.com/AbhishekChamp/distributed-task-queue-simulator.git
 cd distributed-task-queue-simulator
 
 # Install dependencies
@@ -290,6 +291,18 @@ Pre-commit hooks (Husky + lint-staged) ensure that every commit passes formattin
 
 ---
 
+## Deploy to Netlify
+
+This project is configured for easy deployment on Netlify.
+
+- **Build command:** `pnpm run build`
+- **Publish directory:** `dist`
+- **SPA redirect rules:** Already configured in [`netlify.toml`](./netlify.toml)
+
+For detailed instructions (Git deploy, CLI, drag & drop, custom domains, and troubleshooting), see [`NETLIFY_DEPLOY.md`](./NETLIFY_DEPLOY.md).
+
+---
+
 ## Lessons Learned
 
 ### 1. Event-Driven Frontends Are Powerful
@@ -330,4 +343,4 @@ Adding ARIA labels, focus management, and reduced-motion support early in develo
 
 ---
 
-Built with 💙 by [Abhishek R](https://github.com/abhishekr)
+Built with 💙 by [Abhishek R](https://github.com/AbhishekChamp)
